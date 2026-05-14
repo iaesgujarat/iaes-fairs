@@ -76,6 +76,21 @@ before the app will function in production.
    INSERT INTO admin_users (email, name) VALUES ('new.admin@iaesgujarat.org', 'Name');
    ```
 
+### Generating Database Types (optional)
+
+To regenerate strict TypeScript types from the live schema:
+
+```bash
+# Sign in to the IAES Supabase account first
+npx supabase login
+
+# Then generate types
+npm run db:types
+```
+
+This writes `types/database.types.ts`. Import it into your queries via
+`createClient<Database>()` for end-to-end type safety.
+
 ---
 
 ## Razorpay Setup
