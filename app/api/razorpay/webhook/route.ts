@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/razorpay";
+import { processSuccessfulPayment } from "@/lib/processPayment";
 
 export const runtime = "nodejs";
 
@@ -67,27 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, skipped: "no-local-payment" });
   }
 
-  if (event === "payment.captured" || event === "payment.authorized") {
-    await supabase
-      .from("payments")
-      .update({
-        razorpay_payment_id: paymentEntity.id || null,
-        payment_method: paymentEntity.method || null,
-        payment_status: "success",
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", payment.id);
-
-    await supabase
-      .from("invoices")
-      .update({ status: "paid" })
-      .eq("id", payment.invoice_id);
-
-    await supabase
-      .from("registrations")
-      .update({ status: "confirmed" })
-      .eq("id", payment.registration_id);
-  } else if (event === "payment.failed") {
+  if (event === "payment.failed") {
     await supabase
       .from("payments")
       .update({
@@ -96,7 +77,29 @@ export async function POST(req: Request) {
         payment_status: "failed",
       })
       .eq("id", payment.id);
+    return NextResponse.json({ ok: true, event });
   }
 
-  return NextResponse.json({ ok: true, event });
+  if (event !== "payment.captured" && event !== "payment.authorized") {
+    return NextResponse.json({ ok: true, skipped: `event:${event}` });
+  }
+
+  await supabase
+    .from("payments")
+    .update({
+      razorpay_payment_id: paymentEntity.id || null,
+      payment_method: paymentEntity.method || null,
+      payment_status: "success",
+      paid_at: new Date().toISOString(),
+    })
+    .eq("id", payment.id);
+
+  const result = await processSuccessfulPayment(supabase, payment);
+
+  return NextResponse.json({
+    ok: true,
+    event,
+    mode: result.mode,
+    invoiceNumber: result.invoiceNumber ?? null,
+  });
 }

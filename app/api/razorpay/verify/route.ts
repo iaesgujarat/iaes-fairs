@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyPaymentSignature } from "@/lib/razorpay";
-import { getResend, FROM_EMAIL } from "@/lib/resend";
-import { ConfirmationEmail } from "@/emails/ConfirmationEmail";
-import type { Fair, Currency } from "@/types";
+import { processSuccessfulPayment } from "@/lib/processPayment";
 
 export const runtime = "nodejs";
 
@@ -20,9 +18,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, registrationId } = body;
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    registrationId,
+  } = body;
 
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !registrationId) {
+  if (
+    !razorpay_order_id ||
+    !razorpay_payment_id ||
+    !razorpay_signature ||
+    !registrationId
+  ) {
     return NextResponse.json(
       { error: "Missing required fields." },
       { status: 400 }
@@ -48,6 +56,7 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient();
 
+  // Mark the payment row success and grab its FKs for the finaliser
   const { data: payment } = await supabase
     .from("payments")
     .update({
@@ -57,7 +66,7 @@ export async function POST(req: Request) {
       paid_at: new Date().toISOString(),
     })
     .eq("razorpay_order_id", razorpay_order_id)
-    .select()
+    .select("id, invoice_id, registration_id")
     .maybeSingle();
 
   if (!payment) {
@@ -67,61 +76,14 @@ export async function POST(req: Request) {
     );
   }
 
-  await supabase
-    .from("invoices")
-    .update({ status: "paid" })
-    .eq("id", payment.invoice_id);
+  // Shared idempotent finaliser — same logic the webhook runs.
+  // Whichever fires first wins; the other is a no-op.
+  const result = await processSuccessfulPayment(supabase, payment);
 
-  await supabase
-    .from("registrations")
-    .update({ status: "confirmed" })
-    .eq("id", registrationId);
-
-  // Send confirmation email
-  try {
-    if (process.env.RESEND_API_KEY) {
-      const { data: regJoin } = await supabase
-        .from("registrations")
-        .select(
-          `*, fair:fairs(*), invoice:invoices(invoice_number, total_amount_inr, total_amount_usd, payment_currency)`
-        )
-        .eq("id", registrationId)
-        .maybeSingle();
-
-      if (regJoin) {
-        const fair = regJoin.fair as Fair;
-        const inv = (Array.isArray(regJoin.invoice)
-          ? regJoin.invoice[0]
-          : regJoin.invoice) as {
-          invoice_number: string;
-          total_amount_inr: number | null;
-          total_amount_usd: number | null;
-          payment_currency: Currency;
-        };
-
-        const resend = getResend();
-        await resend.emails.send({
-          from: FROM_EMAIL,
-          to: regJoin.contact_email,
-          subject: `Booking Confirmed — ${fair.name}`,
-          react: ConfirmationEmail({
-            contactName: regJoin.contact_name,
-            universityName: regJoin.university_name,
-            fairName: fair.name,
-            fairDate: fair.fair_date,
-            venue: fair.venue || fair.city,
-            boothType: regJoin.booth_type,
-            invoiceNumber: inv?.invoice_number || "",
-            paymentCurrency: inv?.payment_currency,
-            amountPaidUSD: inv?.total_amount_usd ? Number(inv.total_amount_usd) : null,
-            amountPaidINR: inv?.total_amount_inr ? Number(inv.total_amount_inr) : null,
-          }),
-        });
-      }
-    }
-  } catch (e) {
-    console.error("Confirmation email failed:", e);
-  }
-
-  return NextResponse.json({ success: true, registrationId });
+  return NextResponse.json({
+    success: true,
+    registrationId,
+    mode: result.mode,
+    invoiceNumber: result.invoiceNumber ?? null,
+  });
 }

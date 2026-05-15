@@ -2,6 +2,26 @@ import { calculateGST, type GSTCalculation } from "@/lib/gst";
 import { getLiveForexRate, type ForexRate } from "@/lib/forex";
 import type { Currency } from "@/types";
 
+/**
+ * v8: opaque reference for proforma invoices. Format: PI-YYYY-XXXX,
+ * where XXXX is a 4-char alphanumeric drawn from a confusables-free
+ * alphabet (no 0/O/1/I etc).
+ *
+ * Important: this is NOT sequential and does NOT consume any DB
+ * sequence — proforma invoices are not official records. The
+ * `invoice_counter_inr` / `invoice_counter_usd` sequences are only
+ * touched when a TAX invoice is generated inside the Razorpay webhook.
+ */
+export function generateProformaReference(): string {
+  const year = new Date().getFullYear();
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) {
+    suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `PI-${year}-${suffix}`;
+}
+
 export interface BuildInvoiceFieldsInput {
   paymentCurrency: Currency;
   boothPriceUSD: number;

@@ -110,7 +110,13 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
       if (!res.ok) {
         throw new Error(body?.error || "Registration failed. Please try again.");
       }
-      router.push(`/invoice/${body.registrationId}`);
+      // Gateway off → land on the proforma confirmation page.
+      // Gateway on → land on the invoice page with Pay button.
+      const next =
+        body.gatewayActive === false
+          ? `/confirmation/${body.registrationId}`
+          : `/invoice/${body.registrationId}`;
+      router.push(next);
     } catch (e) {
       setSubmitError(
         e instanceof Error ? e.message : "Something went wrong. Please retry."

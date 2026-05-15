@@ -39,6 +39,11 @@ export interface Fair {
   price_extra_rep_usd?: number;
   max_tables_per_university?: number;
 
+  // ---- v8 deferred payment gateway (optional until migration) ----
+  payment_gateway_active?: boolean;
+  gateway_activated_at?: string | null;
+  gateway_activation_note?: string | null;
+
   // ---- v6 lifecycle (optional until DB migration adds the columns) ----
   status?: FairStatus;
   announced_at?: string | null;
@@ -113,8 +118,10 @@ export interface BoothPricing {
 }
 
 export type RegistrationStatus =
-  | "pending"
-  | "invoice_sent"
+  | "registered"      // v8: gateway off, awaiting activation
+  | "payment_open"    // v8: gateway activated, payment link sent
+  | "pending"         // legacy
+  | "invoice_sent"    // legacy
   | "paid"
   | "confirmed"
   | "cancelled";
@@ -203,10 +210,16 @@ export type GSTType = "NONE" | "IGST" | "CGST_SGST";
 
 export type InvoiceStatus = "unpaid" | "paid" | "cancelled";
 
+export type InvoiceType = "PROFORMA" | "TAX";
+
 export interface Invoice {
   id: string;
   registration_id: string;
-  invoice_number: string;
+  /** NULL on proforma invoices — only TAX invoices consume the sequence. */
+  invoice_number: string | null;
+  invoice_type: InvoiceType;
+  /** Set on every proforma; copied onto the matching TAX invoice for paper trail. */
+  proforma_reference: string | null;
 
   payment_currency: Currency;
   forex_rate_used: number | null;

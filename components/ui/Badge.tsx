@@ -47,6 +47,8 @@ export function Badge({
 
 export function StatusBadge({ status }: { status: RegistrationStatus }) {
   const map: Record<RegistrationStatus, { variant: BadgeVariant; label: string }> = {
+    registered: { variant: "gold", label: "Registered" },
+    payment_open: { variant: "blue", label: "Payment Open" },
     pending: { variant: "yellow", label: "Pending" },
     invoice_sent: { variant: "blue", label: "Invoice Sent" },
     paid: { variant: "purple", label: "Paid" },

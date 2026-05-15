@@ -212,12 +212,16 @@ function FairLanding({ fair }: { fair: Fair }) {
                     href="/register/university"
                     className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md bg-navy px-6 py-3 text-sm font-semibold text-white shadow-card transition-colors hover:bg-navy/90"
                   >
-                    Register University
+                    {fair.payment_gateway_active
+                      ? "Register & Pay Now"
+                      : "Register Now — Pay Later"}
                     <span aria-hidden>&rarr;</span>
                   </Link>
 
                   <p className="mt-3 text-center text-xs text-gray-400">
-                    Invoice + Razorpay payment link sent by email
+                    {fair.payment_gateway_active
+                      ? "Invoice + Razorpay payment link sent by email"
+                      : "Payment gateway opens soon — register now to secure your spot. Proforma Invoice emailed instantly."}
                   </p>
                 </div>
 

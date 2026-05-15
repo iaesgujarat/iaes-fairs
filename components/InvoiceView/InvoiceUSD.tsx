@@ -71,7 +71,7 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
 
       {/* Meta */}
       <div className="grid gap-6 rounded-md bg-cream/70 p-4 sm:grid-cols-3">
-        <Meta label="Invoice No." value={invoice.invoice_number} />
+        <Meta label="Invoice No." value={invoice.invoice_number || "—"} />
         <Meta label="Issued" value={formatDateShort(invoice.issued_at)} />
         {invoice.due_date && (
           <Meta label="Due" value={formatDateShort(invoice.due_date)} />

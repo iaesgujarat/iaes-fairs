@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
 import { FairLifecycleActions } from "@/components/FairLifecycleActions";
+import { GatewayToggle } from "@/components/GatewayToggle";
 import { formatDateShort, formatINR, formatUSD } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/fairStatus";
 import { getFairPricing } from "@/lib/pricing";
@@ -93,6 +94,7 @@ export default async function FairControlPanel({
   let revINR = 0;
   let unpaid = 0;
   let confirmed = 0;
+  let registered = 0;
   let addonTables = 0;
   let addonReps = 0;
   let addonUSD = 0;
@@ -103,6 +105,7 @@ export default async function FairControlPanel({
       else if (pay.currency === "INR") revINR += Number(pay.amount_paid);
     }
     if (r.status === "confirmed") confirmed += 1;
+    else if (r.status === "registered") registered += 1;
     else if (r.status !== "cancelled") unpaid += 1;
     // Booth add-on accumulators count paid + confirmed regs only.
     if (r.status === "confirmed" || r.status === "paid") {
@@ -298,6 +301,17 @@ export default async function FairControlPanel({
               <Check ok={true} /> T&amp;C version 2026.1
             </li>
           </ul>
+        </div>
+
+        {/* Payment gateway toggle (Step 2.5) */}
+        <div className="mb-6">
+          <GatewayToggle
+            fairId={f.id}
+            active={!!f.payment_gateway_active}
+            activatedAt={f.gateway_activated_at ?? null}
+            activationNote={f.gateway_activation_note ?? null}
+            registeredCount={registered}
+          />
         </div>
 
         {/* Communications shortcuts */}

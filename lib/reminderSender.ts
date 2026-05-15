@@ -262,7 +262,7 @@ async function runRegistrationsReminder(opts: {
   const statusFilter =
     type === "ITINERARY"
       ? ["confirmed", "paid"]
-      : ["pending", "invoice_sent"];
+      : ["pending", "invoice_sent", "payment_open"];
 
   const { data: regs } = await supabase
     .from("registrations")

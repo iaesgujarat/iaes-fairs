@@ -81,7 +81,7 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
 
       {/* Meta */}
       <div className="grid gap-6 rounded-md bg-cream/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Meta label="Invoice No." value={invoice.invoice_number} />
+        <Meta label="Invoice No." value={invoice.invoice_number || "—"} />
         <Meta label="Issued" value={formatDateShort(invoice.issued_at)} />
         {invoice.due_date && (
           <Meta label="Due" value={formatDateShort(invoice.due_date)} />
