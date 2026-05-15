@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { ConfirmationEmail } from "@/emails/ConfirmationEmail";
-import type { Fair, Invoice } from "@/types";
+import type { Currency, Fair, Invoice } from "@/types";
 
 type Supabase = ReturnType<typeof createAdminClient>;
 
@@ -91,10 +91,13 @@ export async function processSuccessfulPayment(
 
   // First time we're seeing capture for this proforma — issue the
   // official invoice number.
-  // FY-keyed single-series number. No currency in the number —
-  // currency lives on invoice.payment_currency.
+  // FY-keyed number; the function maps currency → DOMESTIC (INR) /
+  // EXPORT (USD) series. Per GST Rule 46, the two series can coexist
+  // as long as each is sequential within itself.
+  const currency = source.payment_currency as Currency;
   const { data: numberRow, error: rpcErr } = await supabase.rpc(
-    "generate_invoice_number"
+    "generate_invoice_number",
+    { p_currency: currency }
   );
   if (rpcErr || !numberRow) {
     console.error("generate_invoice_number RPC failed:", rpcErr);

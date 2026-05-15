@@ -107,6 +107,12 @@ export default async function AdminFairsListPage() {
               >
                 Fairs
               </Link>
+              <Link
+                href="/admin/sequences"
+                className="text-navy/65 hover:text-navy"
+              >
+                Invoice sequences
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4 text-sm">
