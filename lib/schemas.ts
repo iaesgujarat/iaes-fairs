@@ -5,21 +5,44 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 // ---- Step 1: University -------------------------------------
-export const step1Schema = z.object({
-  university_name: z.string().min(2, "University name is required.").max(200),
-  university_country: z.string().min(2).max(80),
-  university_website: z
-    .union([z.url("Please enter a valid URL (https://...)."), z.literal("")])
-    .optional(),
-  booth_type: z.enum(["Standard", "Premium"], {
-    message: "Please pick a booth type.",
-  }),
-  number_of_reps: z
-    .number({ message: "Please enter how many representatives are attending." })
-    .int("Whole numbers only.")
-    .min(1, "At least 1 representative.")
-    .max(2, "Maximum 2 representatives per counter (per IAES T&C §2.3)."),
-});
+export const step1Schema = z
+  .object({
+    university_name: z.string().min(2, "University name is required.").max(200),
+    university_country: z.string().min(2).max(80),
+    university_website: z
+      .union([z.url("Please enter a valid URL (https://...)."), z.literal("")])
+      .optional(),
+    booth_type: z.enum(["Standard", "Premium"], {
+      message: "Please pick a booth type.",
+    }),
+    // Legacy mirror — kept in sync with total_reps server-side.
+    number_of_reps: z
+      .number({ message: "Reps must be a number." })
+      .int()
+      .min(1)
+      .max(6),
+    // v7 booth fields
+    total_tables: z
+      .number({ message: "Pick how many tables you need." })
+      .int()
+      .min(1, "At least 1 table.")
+      .max(3, "Maximum 3 tables per university."),
+    total_reps: z
+      .number({ message: "Pick how many representatives are attending." })
+      .int()
+      .min(2, "At least 2 representatives.")
+      .max(6, "Maximum 6 representatives (2 per table)."),
+  })
+  .superRefine((val, ctx) => {
+    const maxAllowed = val.total_tables * 2;
+    if (val.total_reps > maxAllowed) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["total_reps"],
+        message: `With ${val.total_tables} table(s), max reps is ${maxAllowed} (2 per table).`,
+      });
+    }
+  });
 
 // ---- Step 2: Contact + Terms acceptance ---------------------
 export const step2Schema = z.object({

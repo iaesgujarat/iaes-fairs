@@ -43,6 +43,9 @@ function fairDateLabel(fair: Fair): string {
 interface RawRegistrationsAgg {
   status: string;
   payment_currency: string;
+  addon_tables?: number | null;
+  addon_reps?: number | null;
+  addon_cost_usd?: number | null;
   payments?: { payment_status: string; amount_paid: number; currency: string }[];
 }
 
@@ -70,7 +73,8 @@ export default async function FairControlPanel({
     supabase
       .from("registrations")
       .select(
-        `status, payment_currency, payments(payment_status, amount_paid, currency)`
+        `status, payment_currency, addon_tables, addon_reps, addon_cost_usd,
+         payments(payment_status, amount_paid, currency)`
       )
       .eq("fair_id", params.fairId),
     supabase
@@ -89,6 +93,9 @@ export default async function FairControlPanel({
   let revINR = 0;
   let unpaid = 0;
   let confirmed = 0;
+  let addonTables = 0;
+  let addonReps = 0;
+  let addonUSD = 0;
   for (const r of (regs as RawRegistrationsAgg[] | null) ?? []) {
     const pay = r.payments?.find((p) => p.payment_status === "success");
     if (pay) {
@@ -97,6 +104,12 @@ export default async function FairControlPanel({
     }
     if (r.status === "confirmed") confirmed += 1;
     else if (r.status !== "cancelled") unpaid += 1;
+    // Booth add-on accumulators count paid + confirmed regs only.
+    if (r.status === "confirmed" || r.status === "paid") {
+      addonTables += Number(r.addon_tables || 0);
+      addonReps += Number(r.addon_reps || 0);
+      addonUSD += Number(r.addon_cost_usd || 0);
+    }
   }
   const totalRegs = (regs as unknown[] | null)?.length ?? 0;
 
@@ -215,6 +228,41 @@ export default async function FairControlPanel({
             accent="navy"
           />
         </div>
+
+        {/* Revenue breakdown (booth add-ons) */}
+        {(addonTables > 0 || addonReps > 0) && (
+          <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">
+            <p className="text-xs uppercase tracking-wider text-navy/55">
+              Booth Add-on Revenue (paid + confirmed)
+            </p>
+            <div className="mt-3 grid gap-4 text-sm text-navy/85 sm:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Extra tables
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {addonTables}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Extra reps
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {addonReps}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Add-on revenue (USD)
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {formatUSD(addonUSD)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Build summary */}
         <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">

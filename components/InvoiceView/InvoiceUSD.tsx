@@ -16,6 +16,16 @@ const IAES = {
 };
 
 export function InvoiceUSD({ registration, invoice, fair }: Props) {
+  const total = Number(invoice.total_amount_usd ?? invoice.base_amount_usd ?? 0);
+  const addonCost = Number(registration.addon_cost_usd || 0);
+  const baseUSD = Number(invoice.base_amount_usd ?? 0) - addonCost;
+  const addonTables = Number(registration.addon_tables || 0);
+  const addonReps = Number(registration.addon_reps || 0);
+  const extraTableUSD = Number(fair.price_extra_table_usd ?? 300);
+  const extraRepUSD = Number(fair.price_extra_rep_usd ?? 100);
+  const tierLabel =
+    registration.pricing_tier === "EARLYBIRD" ? "Early Bird" : "Standard";
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -88,13 +98,48 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
             <tr className="border-b border-navy/10">
               <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
               <td className="px-4 py-3">
-                Fair Booth &mdash; {registration.booth_type}
-                <span className="ml-2 text-xs text-navy/50">({fair.name})</span>
+                Fair Registration &mdash; {tierLabel}
+                <div className="text-xs text-navy/55">
+                  1 Counter · 2 Representatives ·{" "}
+                  {formatDateShort(
+                    (fair.fair_date_start || fair.fair_date) as string
+                  )}
+                  {fair.fair_date_end ? " onwards" : ""} · {fair.city}
+                </div>
               </td>
-              <td className="px-4 py-3 text-right">
-                {formatUSD(Number(invoice.base_amount_usd))}
-              </td>
+              <td className="px-4 py-3 text-right">{formatUSD(baseUSD)}</td>
             </tr>
+
+            {addonTables > 0 && (
+              <tr className="border-b border-navy/10">
+                <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
+                <td className="px-4 py-3">
+                  Additional Table × {addonTables}
+                  <div className="text-xs text-navy/55">
+                    USD {extraTableUSD.toLocaleString()} per extra table
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {formatUSD(addonTables * extraTableUSD)}
+                </td>
+              </tr>
+            )}
+
+            {addonReps > 0 && (
+              <tr className="border-b border-navy/10">
+                <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
+                <td className="px-4 py-3">
+                  Additional Representative × {addonReps}
+                  <div className="text-xs text-navy/55">
+                    USD {extraRepUSD.toLocaleString()} per extra rep
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {formatUSD(addonReps * extraRepUSD)}
+                </td>
+              </tr>
+            )}
+
             <tr className="border-b border-navy/10 text-navy/70">
               <td className="px-4 py-3" />
               <td className="px-4 py-3 text-xs italic">
@@ -102,11 +147,12 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
               </td>
               <td className="px-4 py-3 text-right">&mdash;</td>
             </tr>
+
             <tr className="bg-cream/70 font-semibold text-navy">
               <td className="px-4 py-3" />
               <td className="px-4 py-3">Total</td>
               <td className="px-4 py-3 text-right text-base">
-                {formatUSD(Number(invoice.total_amount_usd))}
+                {formatUSD(total)}
               </td>
             </tr>
           </tbody>

@@ -10,6 +10,12 @@ import { Input, Textarea, Select } from "@/components/ui/Input";
 import { registrationSchema, type RegistrationInput } from "@/lib/schemas";
 import { calculateGST } from "@/lib/gst";
 import { getFairPricing } from "@/lib/pricing";
+import {
+  FALLBACK_EXTRA_REP_USD,
+  FALLBACK_EXTRA_TABLE_USD,
+  FALLBACK_MAX_TABLES,
+} from "@/lib/booth";
+import { BoothConfigurator } from "@/components/BoothConfigurator";
 import { formatINR, formatUSD } from "@/lib/utils";
 import type { Fair } from "@/types";
 
@@ -45,7 +51,9 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
       fair_id: fair.id,
       university_country: "USA",
       booth_type: "Standard",
-      number_of_reps: 1,
+      number_of_reps: 2,
+      total_tables: 1,
+      total_reps: 2,
       payment_currency: "USD",
       is_gst_registered: false,
       terms_accepted: false,
@@ -56,6 +64,13 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
   const currency = watch("payment_currency");
   const state = watch("state");
   const isGSTRegistered = watch("is_gst_registered");
+  const totalTables = watch("total_tables") ?? 1;
+  const totalReps = watch("total_reps") ?? 2;
+
+  const extraTableUSD =
+    fair.price_extra_table_usd ?? FALLBACK_EXTRA_TABLE_USD;
+  const extraRepUSD = fair.price_extra_rep_usd ?? FALLBACK_EXTRA_REP_USD;
+  const maxTables = fair.max_tables_per_university ?? FALLBACK_MAX_TABLES;
 
   async function goNext() {
     let fields: (keyof RegistrationInput)[];
@@ -65,7 +80,8 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
         "university_country",
         "university_website",
         "booth_type",
-        "number_of_reps",
+        "total_tables",
+        "total_reps",
       ];
     } else {
       fields = [
@@ -225,16 +241,26 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
             )}
           </fieldset>
 
-          <Input
-            type="number"
-            label="Number of Representatives"
-            required
-            min={1}
-            max={2}
-            error={errors.number_of_reps?.message}
-            hint="Maximum 2 representatives per counter (per IAES T&C §2.3). Additional counters available — contact us."
-            {...register("number_of_reps", { valueAsNumber: true })}
+          <BoothConfigurator
+            basePriceUSD={pricing.priceUSD}
+            priceExtraTableUSD={extraTableUSD}
+            priceExtraRepUSD={extraRepUSD}
+            maxTables={maxTables}
+            totalTables={totalTables}
+            totalReps={totalReps}
+            onChange={({ totalTables: t, totalReps: r }) => {
+              setValue("total_tables", t, { shouldValidate: true });
+              setValue("total_reps", r, { shouldValidate: true });
+              // Keep the legacy field in sync with reps so older queries
+              // (e.g. CSV exports) still surface the right rep count.
+              setValue("number_of_reps", r);
+            }}
           />
+          {errors.total_reps?.message && (
+            <p className="-mt-3 text-xs text-red-600">
+              {errors.total_reps.message}
+            </p>
+          )}
 
           <div className="flex items-center justify-end pt-2">
             <Button type="button" size="lg" onClick={goNext}>
@@ -294,8 +320,16 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
             <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-navy/10 bg-white p-4 text-xs leading-relaxed text-navy/70">
               <p className="font-semibold text-navy">Key points:</p>
               <ul className="mt-2 list-disc space-y-1.5 pl-5">
-                <li>Maximum 2 representatives per counter space.</li>
-                <li>Second counter table charged at USD 2,000 extra.</li>
+                <li>
+                  Default: 1 table and 2 representatives included in the
+                  base fee.
+                </li>
+                <li>
+                  Extra table: USD 300 each (max 3 tables total).
+                </li>
+                <li>
+                  Extra representative: USD 100 each (max 2 reps per table).
+                </li>
                 <li>
                   Transportation provided for official visits only — not
                   personal travel.

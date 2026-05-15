@@ -4,6 +4,13 @@ import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InvoiceEmail } from "@/emails/InvoiceEmail";
 import { buildInvoiceFields } from "@/lib/invoice";
 import { getFairPricing } from "@/lib/pricing";
+import {
+  calculateBoothPricing,
+  validateBoothConfig,
+  FALLBACK_EXTRA_REP_USD,
+  FALLBACK_EXTRA_TABLE_USD,
+  FALLBACK_MAX_TABLES,
+} from "@/lib/booth";
 import { registrationSchema, TERMS_VERSION } from "@/lib/schemas";
 import type { Fair } from "@/types";
 
@@ -65,6 +72,27 @@ export async function POST(req: Request) {
   // Lock the pricing tier + booth fee that's active right now.
   const pricing = getFairPricing(f);
 
+  // Validate booth config server-side (do not trust client values).
+  const boothCheck = validateBoothConfig(
+    { totalTables: input.total_tables, totalReps: input.total_reps },
+    f.max_tables_per_university ?? FALLBACK_MAX_TABLES
+  );
+  if (!boothCheck.valid) {
+    return NextResponse.json(
+      { error: boothCheck.error || "Invalid booth configuration." },
+      { status: 400 }
+    );
+  }
+
+  // Compute booth pricing — grand total goes into the invoice base.
+  // Note per spec §v7: add-ons are at full rate (no early-bird discount).
+  const booth = calculateBoothPricing(
+    { totalTables: input.total_tables, totalReps: input.total_reps },
+    pricing.priceUSD,
+    f.price_extra_table_usd ?? FALLBACK_EXTRA_TABLE_USD,
+    f.price_extra_rep_usd ?? FALLBACK_EXTRA_REP_USD
+  );
+
   // 1. Insert registration
   const { data: registration, error: regErr } = await supabase
     .from("registrations")
@@ -78,7 +106,12 @@ export async function POST(req: Request) {
       contact_email: input.contact_email,
       contact_phone: input.contact_phone || null,
       booth_type: input.booth_type,
-      number_of_reps: input.number_of_reps,
+      number_of_reps: input.total_reps, // keep legacy column in sync
+      total_tables: input.total_tables,
+      total_reps: input.total_reps,
+      addon_tables: booth.addonTables,
+      addon_reps: booth.addonReps,
+      addon_cost_usd: booth.addonTotalCostUSD,
       payment_currency: input.payment_currency,
       pricing_tier: pricing.tier,
       special_requests: input.special_requests || null,
@@ -123,10 +156,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // 3. Compute invoice (forex + GST) — using the tier-locked price
+  // 3. Compute invoice (forex + GST) — base = booth grand total
+  //    (base + add-ons combined; GST applies to the whole).
   const { row: invoiceRow } = await buildInvoiceFields({
     paymentCurrency: input.payment_currency,
-    boothPriceUSD: pricing.priceUSD,
+    boothPriceUSD: booth.grandTotalUSD,
     payerState,
     isGSTRegistered: !!input.is_gst_registered,
   });

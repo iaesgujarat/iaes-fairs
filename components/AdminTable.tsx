@@ -211,11 +211,19 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-navy/90">{r.booth_type}</div>
-                    <div className="text-xs text-navy/50">
-                      {r.number_of_reps} rep
-                      {r.number_of_reps !== 1 ? "s" : ""}
+                    <div className="text-navy/90">
+                      {r.total_tables ?? 1} table
+                      {(r.total_tables ?? 1) === 1 ? "" : "s"} ·{" "}
+                      {r.total_reps ?? r.number_of_reps} rep
+                      {(r.total_reps ?? r.number_of_reps) === 1 ? "" : "s"}
                     </div>
+                    {Number(r.addon_cost_usd || 0) > 0 ? (
+                      <div className="text-xs text-gold-600">
+                        +USD {Number(r.addon_cost_usd).toLocaleString()} add-ons
+                      </div>
+                    ) : (
+                      <div className="text-xs text-navy/45">Base only</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-navy/70">
                     {r.payment_currency}

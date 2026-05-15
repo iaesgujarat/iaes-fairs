@@ -115,19 +115,87 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-navy/10">
-              <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
-              <td className="px-4 py-3">
-                Fair Booth &mdash; {registration.booth_type}
-                <span className="ml-2 text-xs text-navy/50">({fair.name})</span>
-              </td>
-              <td className="px-4 py-3 text-right text-navy/70">
-                USD {Number(invoice.base_amount_usd).toFixed(2)}
-              </td>
-              <td className="px-4 py-3 text-right">
-                {formatINR(Number(invoice.base_amount_inr || 0))}
-              </td>
-            </tr>
+            {(() => {
+              const addonCostUSD = Number(registration.addon_cost_usd || 0);
+              const baseUSD =
+                Number(invoice.base_amount_usd ?? 0) - addonCostUSD;
+              const addonTables = Number(registration.addon_tables || 0);
+              const addonReps = Number(registration.addon_reps || 0);
+              const extraTableUSD = Number(fair.price_extra_table_usd ?? 300);
+              const extraRepUSD = Number(fair.price_extra_rep_usd ?? 100);
+              const rate = Number(invoice.forex_rate_used || 0);
+              const tierLabel =
+                registration.pricing_tier === "EARLYBIRD"
+                  ? "Early Bird"
+                  : "Standard";
+              return (
+                <>
+                  <tr className="border-b border-navy/10">
+                    <td className="px-4 py-3 align-top text-navy/70">
+                      {IAES.sac}
+                    </td>
+                    <td className="px-4 py-3">
+                      Fair Registration &mdash; {tierLabel}
+                      <div className="text-xs text-navy/55">
+                        1 Counter · 2 Representatives · {fair.name}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-navy/70">
+                      USD {baseUSD.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {formatINR(baseUSD * rate)}
+                    </td>
+                  </tr>
+
+                  {addonTables > 0 && (
+                    <tr className="border-b border-navy/10">
+                      <td className="px-4 py-3 align-top text-navy/70">
+                        {IAES.sac}
+                      </td>
+                      <td className="px-4 py-3">
+                        Additional Table × {addonTables}
+                      </td>
+                      <td className="px-4 py-3 text-right text-navy/70">
+                        USD {(addonTables * extraTableUSD).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {formatINR(addonTables * extraTableUSD * rate)}
+                      </td>
+                    </tr>
+                  )}
+
+                  {addonReps > 0 && (
+                    <tr className="border-b border-navy/10">
+                      <td className="px-4 py-3 align-top text-navy/70">
+                        {IAES.sac}
+                      </td>
+                      <td className="px-4 py-3">
+                        Additional Representative × {addonReps}
+                      </td>
+                      <td className="px-4 py-3 text-right text-navy/70">
+                        USD {(addonReps * extraRepUSD).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {formatINR(addonReps * extraRepUSD * rate)}
+                      </td>
+                    </tr>
+                  )}
+
+                  {(addonTables > 0 || addonReps > 0) && (
+                    <tr className="border-b border-navy/10 text-navy/70">
+                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3" colSpan={2}>
+                        Subtotal
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {formatINR(Number(invoice.base_amount_inr || 0))}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })()}
 
             {invoice.gst_type === "CGST_SGST" && (
               <>

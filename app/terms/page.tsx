@@ -128,18 +128,23 @@ export default function TermsPage() {
                 booked and paid for separately.
               </p>
               <p>
-                2.3 A maximum of{" "}
-                <strong>two (2) University Representatives</strong> are
-                permitted per counter space during all fairs and institutional
-                visits.
+                2.3 Each registration includes one (1) counter/table space and
+                a maximum of <strong>two (2) University Representatives</strong>{" "}
+                as the default allocation. Additional representatives may be
+                added during registration at a fee of{" "}
+                <strong>USD 100 per representative</strong>. The maximum number
+                of representatives permitted is <strong>two (2) per table</strong>
+                {" "}booked (e.g. 2 tables = max 4 representatives).
               </p>
               <p>
-                2.4 Universities requiring{" "}
-                <strong>two (2) counter spaces / tables</strong> will be
-                charged an additional fee of <strong>USD 2,000</strong> (or INR
-                equivalent at the applicable forex rate, plus GST if paying in
-                INR). This must be requested and paid for at the time of
-                registration.
+                2.4 Universities requiring additional counter/table space may
+                book up to a maximum of <strong>three (3) tables</strong> in
+                total. Each additional table beyond the default is charged at{" "}
+                <strong>USD 300 per table</strong>. Add-on fees (extra tables
+                and extra representatives) are added to the base registration
+                fee and appear as separate line items on the invoice. All
+                add-on fees are subject to the same GST rules and cancellation
+                policy as the base registration fee.
               </p>
               <p>
                 2.5 All representatives must carry valid identification. IAES

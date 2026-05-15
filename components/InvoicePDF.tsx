@@ -342,15 +342,51 @@ function InvoicePDFUsd({
             <Text style={[styles.cellDesc, styles.th]}>Description</Text>
             <Text style={[styles.cellAmount, styles.th]}>Amount</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.cellSac}>{IAES.sac}</Text>
-            <Text style={styles.cellDesc}>
-              Fair Booth — {registration.booth_type} ({fair.name})
-            </Text>
-            <Text style={styles.cellAmount}>
-              {fmtUSD(Number(invoice.base_amount_usd))}
-            </Text>
-          </View>
+          {(() => {
+            const addonCost = Number(registration.addon_cost_usd || 0);
+            const baseUSD = Number(invoice.base_amount_usd ?? 0) - addonCost;
+            const addonTables = Number(registration.addon_tables || 0);
+            const addonReps = Number(registration.addon_reps || 0);
+            const extraTableUSD = Number(fair.price_extra_table_usd ?? 300);
+            const extraRepUSD = Number(fair.price_extra_rep_usd ?? 100);
+            const tierLabel =
+              registration.pricing_tier === "EARLYBIRD"
+                ? "Early Bird"
+                : "Standard";
+            return (
+              <>
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Fair Registration — {tierLabel} (1 Counter · 2 Reps)
+                  </Text>
+                  <Text style={styles.cellAmount}>{fmtUSD(baseUSD)}</Text>
+                </View>
+                {addonTables > 0 && (
+                  <View style={styles.tableRow}>
+                    <Text style={styles.cellSac}>{IAES.sac}</Text>
+                    <Text style={styles.cellDesc}>
+                      Additional Table × {addonTables}
+                    </Text>
+                    <Text style={styles.cellAmount}>
+                      {fmtUSD(addonTables * extraTableUSD)}
+                    </Text>
+                  </View>
+                )}
+                {addonReps > 0 && (
+                  <View style={styles.tableRow}>
+                    <Text style={styles.cellSac}>{IAES.sac}</Text>
+                    <Text style={styles.cellDesc}>
+                      Additional Representative × {addonReps}
+                    </Text>
+                    <Text style={styles.cellAmount}>
+                      {fmtUSD(addonReps * extraRepUSD)}
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
           <View style={styles.tableRow}>
             <Text style={styles.cellSac}> </Text>
             <Text style={[styles.cellDesc, { fontSize: 9, color: "#6F7B8F", fontStyle: "italic" }]}>
@@ -477,18 +513,73 @@ function InvoicePDFInr({
             <Text style={[styles.cellRate, styles.th]}>Rate</Text>
             <Text style={[styles.cellAmount, styles.th]}>Amount (₹)</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.cellSac}>{IAES.sac}</Text>
-            <Text style={styles.cellDesc}>
-              Fair Booth — {registration.booth_type} ({fair.name})
-            </Text>
-            <Text style={styles.cellRate}>
-              USD {Number(invoice.base_amount_usd).toFixed(2)}
-            </Text>
-            <Text style={styles.cellAmount}>
-              {fmtINR(Number(invoice.base_amount_inr || 0))}
-            </Text>
-          </View>
+          {(() => {
+            const addonCost = Number(registration.addon_cost_usd || 0);
+            const baseUSD = Number(invoice.base_amount_usd ?? 0) - addonCost;
+            const addonTables = Number(registration.addon_tables || 0);
+            const addonReps = Number(registration.addon_reps || 0);
+            const extraTableUSD = Number(fair.price_extra_table_usd ?? 300);
+            const extraRepUSD = Number(fair.price_extra_rep_usd ?? 100);
+            const rate = Number(invoice.forex_rate_used || 0);
+            const tierLabel =
+              registration.pricing_tier === "EARLYBIRD"
+                ? "Early Bird"
+                : "Standard";
+            return (
+              <>
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Fair Registration — {tierLabel} (1 Counter · 2 Reps)
+                  </Text>
+                  <Text style={styles.cellRate}>
+                    USD {baseUSD.toFixed(2)}
+                  </Text>
+                  <Text style={styles.cellAmount}>
+                    {fmtINR(baseUSD * rate)}
+                  </Text>
+                </View>
+                {addonTables > 0 && (
+                  <View style={styles.tableRow}>
+                    <Text style={styles.cellSac}>{IAES.sac}</Text>
+                    <Text style={styles.cellDesc}>
+                      Additional Table × {addonTables}
+                    </Text>
+                    <Text style={styles.cellRate}>
+                      USD {(addonTables * extraTableUSD).toFixed(2)}
+                    </Text>
+                    <Text style={styles.cellAmount}>
+                      {fmtINR(addonTables * extraTableUSD * rate)}
+                    </Text>
+                  </View>
+                )}
+                {addonReps > 0 && (
+                  <View style={styles.tableRow}>
+                    <Text style={styles.cellSac}>{IAES.sac}</Text>
+                    <Text style={styles.cellDesc}>
+                      Additional Representative × {addonReps}
+                    </Text>
+                    <Text style={styles.cellRate}>
+                      USD {(addonReps * extraRepUSD).toFixed(2)}
+                    </Text>
+                    <Text style={styles.cellAmount}>
+                      {fmtINR(addonReps * extraRepUSD * rate)}
+                    </Text>
+                  </View>
+                )}
+                {(addonTables > 0 || addonReps > 0) && (
+                  <View style={styles.tableRow}>
+                    <Text style={styles.cellSac}> </Text>
+                    <Text style={styles.cellDesc}>Subtotal</Text>
+                    <Text style={styles.cellRate}> </Text>
+                    <Text style={styles.cellAmount}>
+                      {fmtINR(Number(invoice.base_amount_inr || 0))}
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
 
           {invoice.gst_type === "CGST_SGST" && (
             <>

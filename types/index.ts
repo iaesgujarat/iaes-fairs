@@ -34,6 +34,11 @@ export interface Fair {
   earlybird_deadline?: string;
   includes?: string[];
 
+  // ---- v7 booth pricing (optional until DB migration adds the columns) ----
+  price_extra_table_usd?: number;
+  price_extra_rep_usd?: number;
+  max_tables_per_university?: number;
+
   // ---- v6 lifecycle (optional until DB migration adds the columns) ----
   status?: FairStatus;
   announced_at?: string | null;
@@ -91,6 +96,22 @@ export interface AnnouncementSend {
   resend_email_id: string | null;
 }
 
+// ---------- v7: booth pricing ----------
+export interface BoothConfig {
+  totalTables: number;
+  totalReps: number;
+}
+
+export interface BoothPricing {
+  basePriceUSD: number;
+  addonTables: number;
+  addonReps: number;
+  addonTablesCostUSD: number;
+  addonRepsCostUSD: number;
+  addonTotalCostUSD: number;
+  grandTotalUSD: number;
+}
+
 export type RegistrationStatus =
   | "pending"
   | "invoice_sent"
@@ -114,6 +135,11 @@ export interface Registration {
   contact_phone: string | null;
   booth_type: BoothType;
   number_of_reps: number;
+  total_tables: number;
+  total_reps: number;
+  addon_tables: number;
+  addon_reps: number;
+  addon_cost_usd: number;
   payment_currency: Currency;
   pricing_tier: PricingTier;
   status: RegistrationStatus;
