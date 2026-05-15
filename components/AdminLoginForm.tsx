@@ -21,7 +21,10 @@ export function AdminLoginForm() {
       const redirectTo = `${window.location.origin}/auth/callback?next=/admin/dashboard`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: false,
+        },
       });
       if (error) throw error;
       router.replace("/admin/login?sent=1");

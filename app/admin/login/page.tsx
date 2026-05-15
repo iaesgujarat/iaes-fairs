@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -8,8 +9,19 @@ import { AdminLoginForm } from "@/components/AdminLoginForm";
 export default function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; sent?: string };
+  searchParams: { error?: string; sent?: string; code?: string; next?: string };
 }) {
+  // Self-heal: if a magic-link landed here with ?code=… (because the link's
+  // redirect_to pointed at /admin/login instead of /auth/callback), forward
+  // to the real callback handler so the session can be established.
+  if (searchParams.code) {
+    const next = searchParams.next || "/admin/dashboard";
+    redirect(
+      `/auth/callback?code=${encodeURIComponent(
+        searchParams.code
+      )}&next=${encodeURIComponent(next)}`
+    );
+  }
   return (
     <>
       <SiteHeader variant="light" />

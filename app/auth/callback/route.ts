@@ -1,25 +1,18 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-
-export const runtime = "nodejs";
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/admin/dashboard";
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/admin/dashboard'
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/admin/login?error=missing_code`);
+  if (code) {
+    const supabase = createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
   }
 
-  const supabase = createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    return NextResponse.redirect(
-      `${origin}/admin/login?error=${encodeURIComponent(error.message)}`
-    );
-  }
-
-  return NextResponse.redirect(`${origin}${next}`);
+  return NextResponse.redirect(`${origin}/admin/login?error=auth_failed`)
 }
