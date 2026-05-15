@@ -5,8 +5,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent } from "@/components/ui/Card";
 import { PaymentButton } from "@/components/PaymentButton";
-import { formatINR } from "@/lib/utils";
-import type { Fair } from "@/types";
+import { formatINR, formatUSD } from "@/lib/utils";
+import type { Fair, Invoice } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +29,18 @@ export default async function PaymentPage({
     redirect(`/confirmation/${params.registrationId}`);
   }
 
-  const invoice = Array.isArray(reg.invoice) ? reg.invoice[0] : reg.invoice;
+  const invoice = (Array.isArray(reg.invoice)
+    ? reg.invoice[0]
+    : reg.invoice) as Invoice | null;
   const fair = reg.fair as Fair;
 
   if (!invoice || !fair) notFound();
+
+  const isINR = invoice.payment_currency === "INR";
+  const payableMajor = isINR
+    ? Number(invoice.total_amount_inr || 0)
+    : Number(invoice.total_amount_usd || 0);
+  const totalLabel = isINR ? formatINR(payableMajor) : formatUSD(payableMajor);
 
   return (
     <>
@@ -69,10 +77,11 @@ export default async function PaymentPage({
                     Total
                   </p>
                   <p className="font-serif text-3xl font-semibold text-navy">
-                    {formatINR(Number(invoice.total_amount_inr))}
+                    {totalLabel}
                   </p>
                   <p className="text-xs text-navy/60">
-                    Invoice {invoice.invoice_number} &middot; incl. 18% GST
+                    Invoice {invoice.invoice_number}
+                    {isINR ? " · incl. GST" : " · zero-rated export"}
                   </p>
                 </div>
                 <div className="text-right text-xs text-navy/60">
@@ -84,7 +93,7 @@ export default async function PaymentPage({
 
             <PaymentButton
               registrationId={params.registrationId}
-              totalAmountInr={Number(invoice.total_amount_inr)}
+              totalLabel={totalLabel}
               fairName={fair.name}
             />
           </CardContent>

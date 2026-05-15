@@ -29,6 +29,33 @@ function escapeCsv(value: unknown): string {
   return str;
 }
 
+interface InvoiceRow {
+  invoice_number?: string;
+  payment_currency?: string;
+  total_amount_inr?: number | null;
+  total_amount_usd?: number | null;
+  gst_type?: string;
+  cgst_amount?: number;
+  sgst_amount?: number;
+  igst_amount?: number;
+  status?: string;
+}
+
+interface PaymentRow {
+  payment_status?: string;
+  amount_paid?: number;
+  currency?: string;
+  paid_at?: string;
+}
+
+interface BillingRow {
+  legal_name?: string;
+  state?: string;
+  pan_number?: string;
+  gstin?: string;
+  is_gst_registered?: boolean;
+}
+
 export async function GET(req: Request) {
   const user = await assertAdmin();
   if (!user) {
@@ -41,8 +68,9 @@ export async function GET(req: Request) {
     .select(
       `*,
        fair:fairs(name, fair_date),
-       invoices(invoice_number, total_amount_inr, status),
-       payments(payment_status, amount_paid_inr, paid_at)`
+       invoices(invoice_number, payment_currency, total_amount_inr, total_amount_usd, gst_type, cgst_amount, sgst_amount, igst_amount, status),
+       payments(payment_status, amount_paid, currency, paid_at),
+       billing_details(legal_name, state, pan_number, gstin, is_gst_registered)`
     )
     .order("created_at", { ascending: false });
 
@@ -65,47 +93,86 @@ export async function GET(req: Request) {
       "Fair Date",
       "Booth Type",
       "Reps",
+      "Currency",
       "Status",
       "Invoice No.",
-      "Invoice Total (INR)",
+      "Total (USD)",
+      "Total (INR)",
+      "GST Type",
+      "CGST",
+      "SGST",
+      "IGST",
       "Payment Status",
-      "Amount Paid (INR)",
+      "Amount Paid",
+      "Paid Currency",
       "Paid At",
+      "Legal Name",
+      "State",
+      "PAN",
+      "GSTIN",
       "Special Requests",
     ];
 
     const lines = [headers.join(",")];
     for (const r of data || []) {
-      const fair = (r as { fair?: { name?: string; fair_date?: string } })
-        .fair;
-      const invoice = (r as { invoices?: Array<{ invoice_number?: string; total_amount_inr?: number; status?: string }> })
-        .invoices?.[0];
-      const payment = (r as { payments?: Array<{ payment_status?: string; amount_paid_inr?: number; paid_at?: string }> })
-        .payments?.find((p) => p.payment_status === "success") ||
-        (r as { payments?: Array<{ payment_status?: string; amount_paid_inr?: number; paid_at?: string }> })
-          .payments?.[0];
+      const row = r as {
+        created_at: string;
+        university_name: string;
+        university_country: string;
+        university_website: string | null;
+        contact_name: string;
+        contact_title: string | null;
+        contact_email: string;
+        contact_phone: string | null;
+        booth_type: string;
+        number_of_reps: number;
+        payment_currency: string;
+        status: string;
+        special_requests: string | null;
+        fair?: { name?: string; fair_date?: string };
+        invoices?: InvoiceRow[];
+        payments?: PaymentRow[];
+        billing_details?: BillingRow[];
+      };
+      const fair = row.fair;
+      const invoice = row.invoices?.[0];
+      const payment =
+        row.payments?.find((p) => p.payment_status === "success") ||
+        row.payments?.[0];
+      const billing = row.billing_details?.[0];
 
       lines.push(
         [
-          r.created_at,
-          r.university_name,
-          r.university_country,
-          r.university_website,
-          r.contact_name,
-          r.contact_title,
-          r.contact_email,
-          r.contact_phone,
+          row.created_at,
+          row.university_name,
+          row.university_country,
+          row.university_website,
+          row.contact_name,
+          row.contact_title,
+          row.contact_email,
+          row.contact_phone,
           fair?.name,
           fair?.fair_date,
-          r.booth_type,
-          r.number_of_reps,
-          r.status,
+          row.booth_type,
+          row.number_of_reps,
+          row.payment_currency,
+          row.status,
           invoice?.invoice_number,
-          invoice?.total_amount_inr,
+          invoice?.total_amount_usd ?? "",
+          invoice?.total_amount_inr ?? "",
+          invoice?.gst_type,
+          invoice?.cgst_amount ?? "",
+          invoice?.sgst_amount ?? "",
+          invoice?.igst_amount ?? "",
           payment?.payment_status,
-          payment?.amount_paid_inr,
+          payment?.amount_paid,
+          payment?.currency,
           payment?.paid_at,
-          r.special_requests,
+          billing?.legal_name,
+          billing?.state,
+          billing?.pan_number,
+          billing?.gstin,
+          row.special_requests,
         ]
           .map(escapeCsv)
           .join(",")

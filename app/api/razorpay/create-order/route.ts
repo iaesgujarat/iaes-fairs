@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getRazorpay, toPaise } from "@/lib/razorpay";
+import { getRazorpay, toMinorUnit } from "@/lib/razorpay";
+import type { Currency } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,9 @@ export async function POST(req: Request) {
 
   const { data: registration, error: regErr } = await supabase
     .from("registrations")
-    .select("id, status, contact_email, contact_name, contact_phone, university_name")
+    .select(
+      "id, status, contact_email, contact_name, contact_phone, university_name, payment_currency"
+    )
     .eq("id", body.registrationId)
     .maybeSingle();
 
@@ -56,21 +59,37 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!process.env.RAZORPAY_KEY_SECRET || !process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+  if (
+    !process.env.RAZORPAY_KEY_SECRET ||
+    !process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+  ) {
     return NextResponse.json(
       { error: "Razorpay is not configured. Set the keys in environment variables." },
       { status: 500 }
     );
   }
 
-  const razorpay = getRazorpay();
-  const amountPaise = toPaise(Number(invoice.total_amount_inr));
+  const currency = invoice.payment_currency as Currency;
+  const payableMajor =
+    currency === "INR"
+      ? Number(invoice.total_amount_inr)
+      : Number(invoice.total_amount_usd);
 
+  if (!payableMajor || payableMajor <= 0) {
+    return NextResponse.json(
+      { error: "Invoice has no payable total." },
+      { status: 500 }
+    );
+  }
+
+  const amountMinor = toMinorUnit(payableMajor, currency);
+
+  const razorpay = getRazorpay();
   let order;
   try {
     order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency: "INR",
+      amount: amountMinor,
+      currency,
       receipt: invoice.invoice_number,
       notes: {
         registration_id: registration.id,
@@ -81,17 +100,22 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("Razorpay order failed:", e);
     return NextResponse.json(
-      { error: "Could not create Razorpay order." },
+      {
+        error:
+          currency === "USD"
+            ? "Could not create USD order. Confirm Razorpay International is enabled on this account."
+            : "Could not create Razorpay order.",
+      },
       { status: 502 }
     );
   }
 
-  // Record an initiated payment
   await supabase.from("payments").insert({
     invoice_id: invoice.id,
     registration_id: registration.id,
     razorpay_order_id: order.id,
-    amount_paid_inr: Number(invoice.total_amount_inr),
+    amount_paid: payableMajor,
+    currency,
     payment_status: "initiated",
   });
 

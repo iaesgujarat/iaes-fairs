@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { formatINR, formatDateShort } from "@/lib/utils";
+import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
 import type {
   Registration,
   Fair,
@@ -15,10 +15,37 @@ import type {
   RegistrationStatus,
 } from "@/types";
 
+function formatAcceptedAt(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${date} ${time}`;
+}
+
 interface Row extends Registration {
-  fair: Pick<Fair, "id" | "name" | "fair_date" | "booth_price_inr">;
-  invoices: Pick<Invoice, "id" | "invoice_number" | "total_amount_inr" | "status">[];
-  payments: Pick<Payment, "id" | "payment_status" | "amount_paid_inr">[];
+  fair: Pick<Fair, "id" | "name" | "fair_date">;
+  invoices: Pick<
+    Invoice,
+    | "id"
+    | "invoice_number"
+    | "payment_currency"
+    | "total_amount_inr"
+    | "total_amount_usd"
+    | "gst_type"
+    | "status"
+  >[];
+  payments: Pick<
+    Payment,
+    "id" | "payment_status" | "amount_paid" | "currency"
+  >[];
 }
 
 const ALL_STATUSES: (RegistrationStatus | "all")[] = [
@@ -29,6 +56,14 @@ const ALL_STATUSES: (RegistrationStatus | "all")[] = [
   "confirmed",
   "cancelled",
 ];
+
+function formatInvoiceTotal(invoice: Row["invoices"][number] | undefined): string {
+  if (!invoice) return "—";
+  if (invoice.payment_currency === "INR") {
+    return formatINR(Number(invoice.total_amount_inr || 0));
+  }
+  return formatUSD(Number(invoice.total_amount_usd || 0));
+}
 
 export function AdminTable({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
@@ -71,9 +106,10 @@ export function AdminTable({ rows }: { rows: Row[] }) {
   async function sendReminder(registrationId: string) {
     setUpdating(registrationId);
     try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}/remind`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/admin/registrations/${registrationId}/remind`,
+        { method: "POST" }
+      );
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || "Reminder failed");
       alert("Reminder email sent.");
@@ -86,7 +122,6 @@ export function AdminTable({ rows }: { rows: Row[] }) {
 
   return (
     <div className="rounded-lg border border-navy/10 bg-white shadow-card">
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 border-b border-navy/10 p-4">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy/40" />
@@ -112,7 +147,6 @@ export function AdminTable({ rows }: { rows: Row[] }) {
         </select>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-cream/60 text-xs uppercase tracking-wider text-navy/55">
@@ -121,8 +155,11 @@ export function AdminTable({ rows }: { rows: Row[] }) {
               <Th>Contact</Th>
               <Th>Fair</Th>
               <Th>Booth</Th>
+              <Th>Currency</Th>
               <Th>Amount</Th>
+              <Th>GST</Th>
               <Th>Status</Th>
+              <Th>T&amp;C</Th>
               <Th>Registered</Th>
               <Th>Actions</Th>
             </tr>
@@ -131,7 +168,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={11}
                   className="px-4 py-10 text-center text-sm text-navy/50"
                 >
                   No registrations match the current filter.
@@ -158,9 +195,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-navy">{r.contact_name}</div>
-                    <div className="text-xs text-navy/55">
-                      {r.contact_email}
-                    </div>
+                    <div className="text-xs text-navy/55">{r.contact_email}</div>
                     {r.contact_phone && (
                       <div className="text-xs text-navy/40">
                         {r.contact_phone}
@@ -182,11 +217,14 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                       {r.number_of_reps !== 1 ? "s" : ""}
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-navy/70">
+                    {r.payment_currency}
+                  </td>
                   <td className="px-4 py-3">
                     {invoice ? (
                       <>
                         <div className="font-medium text-navy">
-                          {formatINR(Number(invoice.total_amount_inr))}
+                          {formatInvoiceTotal(invoice)}
                         </div>
                         <div className="text-xs text-navy/50">
                           {invoice.invoice_number}
@@ -196,12 +234,40 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                       <span className="text-xs text-navy/40">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-xs text-navy/65">
+                    {invoice?.gst_type === "CGST_SGST"
+                      ? "CGST+SGST"
+                      : invoice?.gst_type === "IGST"
+                      ? "IGST"
+                      : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={r.status} />
                     {successPayment && (
                       <div className="mt-1 text-[10px] uppercase tracking-wide text-emerald-700">
                         paid
                       </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {r.terms_accepted ? (
+                      <>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
+                          ✓ Yes
+                        </span>
+                        <div className="mt-1 text-[10px] text-navy/55">
+                          {formatAcceptedAt(r.terms_accepted_at)}
+                        </div>
+                        {r.terms_version && (
+                          <div className="text-[10px] text-navy/40">
+                            v{r.terms_version}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                        ⚠ Not recorded
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-navy/65">

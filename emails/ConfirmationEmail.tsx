@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { Currency } from "@/types";
 
 interface Props {
   contactName: string;
@@ -8,13 +9,23 @@ interface Props {
   venue: string;
   boothType: string;
   invoiceNumber: string;
-  amountPaidInr: number;
+  paymentCurrency: Currency;
+  amountPaidUSD: number | null;
+  amountPaidINR: number | null;
 }
 
 function formatINR(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatUSD(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     maximumFractionDigits: 0,
   }).format(amount);
 }
@@ -27,7 +38,9 @@ export function ConfirmationEmail({
   venue,
   boothType,
   invoiceNumber,
-  amountPaidInr,
+  paymentCurrency,
+  amountPaidUSD,
+  amountPaidINR,
 }: Props) {
   const prettyDate = new Date(fairDate).toLocaleDateString("en-IN", {
     weekday: "long",
@@ -35,6 +48,10 @@ export function ConfirmationEmail({
     month: "long",
     year: "numeric",
   });
+  const amountLabel =
+    paymentCurrency === "INR"
+      ? formatINR(amountPaidINR ?? 0)
+      : formatUSD(amountPaidUSD ?? 0);
 
   return (
     <div
@@ -113,7 +130,7 @@ export function ConfirmationEmail({
                     ["Venue", venue],
                     ["Booth Type", boothType],
                     ["Invoice", invoiceNumber],
-                    ["Amount Paid", formatINR(amountPaidInr)],
+                    ["Amount Paid", amountLabel],
                   ].map(([label, value]) => (
                     <tr key={label}>
                       <td

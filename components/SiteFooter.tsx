@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-navy/10 bg-white">
@@ -44,9 +46,17 @@ export function SiteFooter() {
             </p>
           </div>
         </div>
-        <div className="mt-8 border-t border-navy/10 pt-6 text-xs text-navy/50">
-          &copy; {new Date().getFullYear()} Indo American Education Society. All
-          rights reserved. &middot; fairs.iaesgujarat.org
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-navy/10 pt-6 text-xs text-navy/50">
+          <span>
+            &copy; {new Date().getFullYear()} Indo American Education Society.
+            All rights reserved. &middot; fairs.iaesgujarat.org
+          </span>
+          <Link
+            href="/terms"
+            className="text-navy/60 hover:text-navy hover:underline"
+          >
+            Terms &amp; Conditions
+          </Link>
         </div>
       </div>
     </footer>

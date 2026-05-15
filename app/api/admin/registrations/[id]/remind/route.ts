@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InvoiceEmail } from "@/emails/InvoiceEmail";
-import type { Fair } from "@/types";
+import type { Fair, Currency } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -73,7 +73,13 @@ export async function POST(
       universityName: reg.university_name,
       fairName: fair.name,
       invoiceNumber: invoice.invoice_number,
-      amountInr: Number(invoice.total_amount_inr),
+      paymentCurrency: invoice.payment_currency as Currency,
+      totalAmountUSD: invoice.total_amount_usd
+        ? Number(invoice.total_amount_usd)
+        : null,
+      totalAmountINR: invoice.total_amount_inr
+        ? Number(invoice.total_amount_inr)
+        : null,
       dueDate: fair.registration_deadline,
       payUrl,
     }),

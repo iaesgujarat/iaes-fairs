@@ -13,3 +13,9 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Scheduled Functions live under netlify/functions/*.mts
+# (each file declares its own cron via `export const config`).
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

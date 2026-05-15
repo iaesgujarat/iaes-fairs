@@ -1,21 +1,53 @@
-import { CalendarDays, IndianRupee, Users } from "lucide-react";
+import { CalendarDays, DollarSign, Users } from "lucide-react";
 import type { Fair } from "@/types";
-import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
+import { formatUSD, formatDateShort } from "@/lib/utils";
+import { getFairPricing } from "@/lib/pricing";
+
+function fairDatesLabel(fair: Fair): string {
+  const start = fair.fair_date_start || fair.fair_date;
+  const end = fair.fair_date_end;
+  if (!end || end === start) return formatDateShort(start);
+  const startD = new Date(start);
+  const endD = new Date(end);
+  const sameMonth =
+    startD.getMonth() === endD.getMonth() &&
+    startD.getFullYear() === endD.getFullYear();
+  if (sameMonth) {
+    return `${startD.getDate()}–${endD.getDate()} ${endD.toLocaleDateString(
+      "en-IN",
+      { month: "short", year: "numeric" }
+    )}`;
+  }
+  return `${formatDateShort(start)} – ${formatDateShort(end)}`;
+}
 
 export function FairDetails({ fair }: { fair: Fair }) {
+  const pricing = getFairPricing(fair);
   const cards = [
     {
-      label: "Booth Price",
-      value: formatINR(fair.booth_price_inr),
-      sub: `${formatUSD(fair.booth_price_usd)} · includes 18% GST`,
-      icon: IndianRupee,
+      label: pricing.isEarlyBird ? "Booth Price (Early Bird)" : "Booth Price",
+      value: formatUSD(pricing.priceUSD),
+      sub: pricing.isEarlyBird
+        ? `Save USD ${pricing.savingUSD} — ends ${
+            pricing.earlybirdDeadline
+              ? formatDateShort(pricing.earlybirdDeadline)
+              : ""
+          }`
+        : "Pay in USD (no GST) or INR (plus GST)",
+      icon: DollarSign,
     },
     {
-      label: "Registration Deadline",
-      value: fair.registration_deadline
-        ? formatDateShort(fair.registration_deadline)
-        : "Rolling",
-      sub: "Early registration recommended",
+      label: "Fair Dates",
+      value: fairDatesLabel(fair),
+      sub: fair.arrive_by
+        ? `Arrive by ${formatDateShort(fair.arrive_by)}${
+            fair.depart_after
+              ? ` · depart after ${formatDateShort(fair.depart_after)}`
+              : ""
+          }`
+        : fair.registration_deadline
+        ? `Registration closes ${formatDateShort(fair.registration_deadline)}`
+        : "Three-day fair + institute visits",
       icon: CalendarDays,
     },
     {

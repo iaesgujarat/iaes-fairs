@@ -63,7 +63,6 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (!payment) {
-    // Order was created but no local row — log and acknowledge
     console.warn(`Webhook: no payment row for order ${paymentEntity.order_id}`);
     return NextResponse.json({ ok: true, skipped: "no-local-payment" });
   }

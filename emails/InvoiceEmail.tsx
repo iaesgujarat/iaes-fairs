@@ -1,11 +1,14 @@
 import * as React from "react";
+import type { Currency } from "@/types";
 
 interface Props {
   contactName: string;
   universityName: string;
   fairName: string;
   invoiceNumber: string;
-  amountInr: number;
+  paymentCurrency: Currency;
+  totalAmountUSD: number | null;
+  totalAmountINR: number | null;
   dueDate?: string | null;
   payUrl: string;
 }
@@ -18,15 +21,31 @@ function formatINR(amount: number): string {
   }).format(amount);
 }
 
+function formatUSD(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function InvoiceEmail({
   contactName,
   universityName,
   fairName,
   invoiceNumber,
-  amountInr,
+  paymentCurrency,
+  totalAmountUSD,
+  totalAmountINR,
   dueDate,
   payUrl,
 }: Props) {
+  const isINR = paymentCurrency === "INR";
+  const amountLabel = isINR
+    ? formatINR(totalAmountINR ?? 0)
+    : formatUSD(totalAmountUSD ?? 0);
+  const amountSubLabel = isINR ? "(inclusive of GST)" : "(zero-rated export of service)";
+
   return (
     <div
       style={{
@@ -62,7 +81,7 @@ export function InvoiceEmail({
                 IAES &middot; Indo American Education Society
               </div>
               <div style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>
-                Invoice for {fairName}
+                {isINR ? "Tax Invoice" : "Invoice"} &mdash; {fairName}
               </div>
             </td>
           </tr>
@@ -114,7 +133,7 @@ export function InvoiceEmail({
                         fontWeight: 600,
                       }}
                     >
-                      {formatINR(amountInr)}{" "}
+                      {amountLabel}{" "}
                       <span
                         style={{
                           fontWeight: 400,
@@ -122,7 +141,7 @@ export function InvoiceEmail({
                           fontSize: 12,
                         }}
                       >
-                        (incl. 18% GST)
+                        {amountSubLabel}
                       </span>
                     </td>
                   </tr>
@@ -204,7 +223,7 @@ export function InvoiceEmail({
                 padding: "16px 24px",
               }}
             >
-              This is a transactional email regarding your fair registration.
+              GSTIN: 24AAATI2674J1ZM &middot; SAC: 998596
               <br />
               fairs.iaesgujarat.org
             </td>

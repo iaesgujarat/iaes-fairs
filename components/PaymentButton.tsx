@@ -22,11 +22,11 @@ declare global {
 
 export function PaymentButton({
   registrationId,
-  totalAmountInr,
+  totalLabel,
   fairName,
 }: {
   registrationId: string;
-  totalAmountInr: number;
+  totalLabel: string;
   fairName: string;
 }) {
   const router = useRouter();
@@ -123,11 +123,7 @@ export function PaymentButton({
         >
           {loading
             ? "Preparing secure payment..."
-            : `Pay ${new Intl.NumberFormat("en-IN", {
-                style: "currency",
-                currency: "INR",
-                maximumFractionDigits: 0,
-              }).format(totalAmountInr)} via Razorpay`}
+            : `Pay ${totalLabel} via Razorpay`}
         </Button>
         <p className="text-center text-xs text-navy/50">
           Secured by Razorpay. Cards, UPI, and netbanking accepted.

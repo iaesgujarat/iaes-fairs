@@ -6,8 +6,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent } from "@/components/ui/Card";
 import { InvoiceActions } from "@/components/InvoiceActions";
-import { formatINR, formatDate } from "@/lib/utils";
-import type { Fair } from "@/types";
+import { formatINR, formatUSD, formatDate } from "@/lib/utils";
+import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -18,17 +18,34 @@ export default async function ConfirmationPage({
 }) {
   const supabase = createAdminClient();
 
-  const { data: reg } = await supabase
+  const { data } = await supabase
     .from("registrations")
-    .select(`*, fair:fairs(*), invoice:invoices(*)`)
+    .select(
+      `*,
+       fair:fairs(*),
+       invoice:invoices(*),
+       billing:billing_details(*)`
+    )
     .eq("id", params.registrationId)
     .maybeSingle();
 
-  if (!reg) notFound();
+  if (!data) notFound();
 
-  const invoice = Array.isArray(reg.invoice) ? reg.invoice[0] : reg.invoice;
-  const fair = reg.fair as Fair;
+  const invoice = (Array.isArray(data.invoice)
+    ? data.invoice[0]
+    : data.invoice) as Invoice | null;
+  const fair = data.fair as Fair | null;
+  const billing = (Array.isArray(data.billing)
+    ? data.billing[0]
+    : data.billing) as BillingDetails | null;
+
   if (!invoice || !fair) notFound();
+
+  const registration = data as Registration;
+  const isINR = invoice.payment_currency === "INR";
+  const amountLabel = isINR
+    ? formatINR(Number(invoice.total_amount_inr || 0))
+    : formatUSD(Number(invoice.total_amount_usd || 0));
 
   return (
     <>
@@ -47,45 +64,34 @@ export default async function ConfirmationPage({
                 You&rsquo;re in.
               </h1>
               <p className="mt-3 text-navy/70">
-                {reg.university_name} is registered for{" "}
+                {registration.university_name} is registered for{" "}
                 <strong>{fair.name}</strong> &mdash; we look forward to hosting
                 you on {formatDate(fair.fair_date)} in {fair.city}.
               </p>
             </div>
 
             <div className="grid gap-4 rounded-md border border-navy/10 bg-cream/60 p-6 text-left text-sm">
-              <Row label="University" value={reg.university_name} />
+              <Row label="University" value={registration.university_name} />
               <Row label="Fair" value={fair.name} />
               <Row label="Date" value={formatDate(fair.fair_date)} />
               <Row label="Venue" value={fair.venue || fair.city} />
-              <Row label="Booth Type" value={reg.booth_type} />
+              <Row label="Booth Type" value={registration.booth_type} />
               <Row label="Invoice" value={invoice.invoice_number} />
-              <Row
-                label="Amount Paid"
-                value={formatINR(Number(invoice.total_amount_inr))}
-                bold
-              />
+              <Row label="Amount Paid" value={amountLabel} bold />
             </div>
 
             <p className="text-sm text-navy/70">
               A confirmation email has been sent to{" "}
-              <strong>{reg.contact_email}</strong>.
+              <strong>{registration.contact_email}</strong>.
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 pt-2">
               <InvoiceActions
-                invoiceNumber={invoice.invoice_number}
-                issuedDate={invoice.issued_at}
-                dueDate={invoice.due_date}
-                universityName={reg.university_name}
-                contactName={reg.contact_name}
-                contactEmail={reg.contact_email}
-                boothType={reg.booth_type}
-                amountInr={Number(invoice.amount_inr)}
-                gstAmountInr={Number(invoice.gst_amount_inr)}
-                totalAmountInr={Number(invoice.total_amount_inr)}
-                registrationId={reg.id}
-                status="confirmed"
+                registration={registration}
+                invoice={invoice}
+                fair={fair}
+                billing={billing}
+                showPayButton={false}
               />
             </div>
 
@@ -129,9 +135,7 @@ function Row({
         {label}
       </span>
       <span
-        className={
-          bold ? "font-semibold text-navy" : "text-navy/85"
-        }
+        className={bold ? "font-semibold text-navy" : "text-navy/85"}
       >
         {value}
       </span>

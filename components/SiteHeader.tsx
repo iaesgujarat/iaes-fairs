@@ -33,7 +33,7 @@ export function SiteHeader({ variant = "navy" }: { variant?: "navy" | "light" })
             Fair Details
           </Link>
           <Link
-            href="/register"
+            href="/#register"
             className={isNavy ? "hover:text-gold" : "hover:text-navy-600"}
           >
             Register

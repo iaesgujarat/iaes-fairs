@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { ConfirmationEmail } from "@/emails/ConfirmationEmail";
-import type { Fair } from "@/types";
+import type { Fair, Currency } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -83,16 +83,21 @@ export async function POST(req: Request) {
       const { data: regJoin } = await supabase
         .from("registrations")
         .select(
-          `*, fair:fairs(*), invoice:invoices(invoice_number, total_amount_inr)`
+          `*, fair:fairs(*), invoice:invoices(invoice_number, total_amount_inr, total_amount_usd, payment_currency)`
         )
         .eq("id", registrationId)
         .maybeSingle();
 
       if (regJoin) {
         const fair = regJoin.fair as Fair;
-        const inv = Array.isArray(regJoin.invoice)
+        const inv = (Array.isArray(regJoin.invoice)
           ? regJoin.invoice[0]
-          : regJoin.invoice;
+          : regJoin.invoice) as {
+          invoice_number: string;
+          total_amount_inr: number | null;
+          total_amount_usd: number | null;
+          payment_currency: Currency;
+        };
 
         const resend = getResend();
         await resend.emails.send({
@@ -107,7 +112,9 @@ export async function POST(req: Request) {
             venue: fair.venue || fair.city,
             boothType: regJoin.booth_type,
             invoiceNumber: inv?.invoice_number || "",
-            amountPaidInr: Number(inv?.total_amount_inr || 0),
+            paymentCurrency: inv?.payment_currency,
+            amountPaidUSD: inv?.total_amount_usd ? Number(inv.total_amount_usd) : null,
+            amountPaidINR: inv?.total_amount_inr ? Number(inv.total_amount_inr) : null,
           }),
         });
       }

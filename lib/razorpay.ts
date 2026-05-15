@@ -1,5 +1,6 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import type { Currency } from "@/types";
 
 export function getRazorpay() {
   return new Razorpay({
@@ -30,6 +31,17 @@ export function verifyPaymentSignature(
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+/**
+ * Convert a major-unit amount (rupees or dollars) into Razorpay's
+ * expected minor unit (paise or cents). Both currencies use ×100, so
+ * the `Currency` param is for documentation / future-proofing only.
+ */
+export function toMinorUnit(amount: number, currency: Currency): number {
+  void currency;
+  return Math.round(amount * 100);
+}
+
+/** @deprecated use {@link toMinorUnit} */
 export function toPaise(rupees: number): number {
   return Math.round(rupees * 100);
 }

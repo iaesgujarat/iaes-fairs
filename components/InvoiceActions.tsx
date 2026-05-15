@@ -5,48 +5,50 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { InvoicePDF } from "@/components/InvoicePDF";
+import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 
 const PDFDownloadLink = dynamic(
   () => import("@react-pdf/renderer").then((m) => m.PDFDownloadLink),
-  { ssr: false, loading: () => <Button variant="secondary" disabled>Preparing PDF...</Button> }
+  {
+    ssr: false,
+    loading: () => (
+      <Button variant="secondary" disabled>
+        Preparing PDF...
+      </Button>
+    ),
+  }
 );
 
 interface Props {
-  invoiceNumber: string;
-  issuedDate: string;
-  dueDate?: string | null;
-  universityName: string;
-  contactName: string;
-  contactEmail: string;
-  boothType: string;
-  amountInr: number;
-  gstAmountInr: number;
-  totalAmountInr: number;
-  registrationId: string;
-  status: string;
+  registration: Registration;
+  invoice: Invoice;
+  fair: Fair;
+  billing: BillingDetails | null;
+  showPayButton?: boolean;
 }
 
-export function InvoiceActions(props: Props) {
-  const isPaid = props.status === "paid" || props.status === "confirmed";
+export function InvoiceActions({
+  registration,
+  invoice,
+  fair,
+  billing,
+  showPayButton = true,
+}: Props) {
+  const isPaid =
+    registration.status === "paid" || registration.status === "confirmed";
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
       <PDFDownloadLink
         document={
           <InvoicePDF
-            invoiceNumber={props.invoiceNumber}
-            issuedDate={props.issuedDate}
-            dueDate={props.dueDate}
-            universityName={props.universityName}
-            contactName={props.contactName}
-            contactEmail={props.contactEmail}
-            boothType={props.boothType}
-            amountInr={props.amountInr}
-            gstAmountInr={props.gstAmountInr}
-            totalAmountInr={props.totalAmountInr}
+            registration={registration}
+            invoice={invoice}
+            fair={fair}
+            billing={billing}
           />
         }
-        fileName={`${props.invoiceNumber}.pdf`}
+        fileName={`${invoice.invoice_number}.pdf`}
       >
         {({ loading }) => (
           <Button variant="secondary" disabled={loading}>
@@ -56,8 +58,8 @@ export function InvoiceActions(props: Props) {
         )}
       </PDFDownloadLink>
 
-      {!isPaid && (
-        <Link href={`/payment/${props.registrationId}`}>
+      {showPayButton && !isPaid && (
+        <Link href={`/payment/${registration.id}`}>
           <Button variant="gold" size="lg">
             Pay Now &rarr;
           </Button>
