@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -43,7 +44,12 @@ export async function middleware(request: NextRequest) {
       return redirectResponse;
     }
 
-    const { data: admin } = await supabase
+    // The user's identity is already validated above via getUser()
+    // (it verifies the JWT with the auth server). The admin-membership
+    // lookup goes through the service role — per the documented design
+    // (0002_v2_schema.sql) admin reads bypass RLS — so it can never be
+    // silently denied by an admin_users RLS policy.
+    const { data: admin } = await createAdminClient()
       .from("admin_users")
       .select("email")
       .eq("email", user.email!)
