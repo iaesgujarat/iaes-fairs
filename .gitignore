@@ -37,3 +37,10 @@ next-env.d.ts
 
 # Claude Code local agent config (per-machine settings, hooks, etc)
 .claude/
+
+# Supabase CLI local scratch state (may contain access tokens / pooler creds)
+supabase/.temp/
+supabase/.branches/
+
+# Local Netlify folder
+.netlify
