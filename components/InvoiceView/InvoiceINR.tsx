@@ -1,6 +1,7 @@
 import { formatINR, formatDateShort } from "@/lib/utils";
 import { rupeesToWords } from "@/lib/invoice";
 import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
+import { BankDetailsHTML } from "./BankDetailsHTML";
 
 interface Props {
   registration: Registration;
@@ -246,6 +247,8 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
       <p className="text-sm italic text-navy/70">
         Amount in words: {rupeesToWords(Number(invoice.total_amount_inr || 0))}
       </p>
+
+      <BankDetailsHTML />
 
       <p className="text-xs text-navy/50">
         Payments accepted via Razorpay (card / UPI / netbanking). For wire

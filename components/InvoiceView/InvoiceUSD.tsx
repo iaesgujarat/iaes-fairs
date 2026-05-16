@@ -1,5 +1,6 @@
 import { formatUSD, formatDateShort } from "@/lib/utils";
 import type { Registration, Invoice, Fair } from "@/types";
+import { BankDetailsHTML } from "./BankDetailsHTML";
 
 interface Props {
   registration: Registration;
@@ -158,6 +159,8 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
           </tbody>
         </table>
       </div>
+
+      <BankDetailsHTML />
 
       <p className="text-xs text-navy/50">
         Payments accepted via Razorpay International (card). For international

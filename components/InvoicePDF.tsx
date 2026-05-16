@@ -9,6 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import { rupeesToWords } from "@/lib/invoice";
 import type { Invoice, Registration, Fair, BillingDetails } from "@/types";
+import { BankDetailsPDF } from "./InvoiceView/BankDetailsPDF";
 
 interface Props {
   registration: Registration;
@@ -403,6 +404,8 @@ function InvoicePDFUsd({
           </View>
         </View>
 
+        <BankDetailsPDF />
+
         <TermsSummary registration={registration} />
 
         <Text style={styles.footer}>
@@ -632,6 +635,8 @@ function InvoicePDFInr({
         <Text style={styles.words}>
           Amount in words: {rupeesToWords(Number(invoice.total_amount_inr || 0))}
         </Text>
+
+        <BankDetailsPDF />
 
         <TermsSummary registration={registration} />
 

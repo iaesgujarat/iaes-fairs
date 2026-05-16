@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Invoice, Registration, Fair } from "@/types";
+import { BankDetailsPDF } from "./BankDetailsPDF";
 
 interface Props {
   registration: Registration;
@@ -320,6 +321,8 @@ export function ProformaInvoicePDF({ registration, invoice, fair }: Props) {
             </Text>
           </View>
         )}
+
+        <BankDetailsPDF />
 
         {/* Statutory disclaimer */}
         <Text style={styles.disclaimer}>
