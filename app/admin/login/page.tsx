@@ -9,7 +9,13 @@ import { AdminLoginForm } from "@/components/AdminLoginForm";
 export default function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; sent?: string; code?: string; next?: string };
+  searchParams: {
+    error?: string;
+    reason?: string;
+    sent?: string;
+    code?: string;
+    next?: string;
+  };
 }) {
   // Self-heal: if a magic-link landed here with ?code=… (because the link's
   // redirect_to pointed at /admin/login instead of /auth/callback), forward
@@ -48,6 +54,22 @@ export default function AdminLoginPage({
                   eduadviser@iaesgujarat.org
                 </a>
                 .
+              </div>
+            )}
+
+            {searchParams.error === "auth_failed" && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p>
+                  Sign-in link could not be completed. This usually means the
+                  link was already used, expired, or opened in a different
+                  browser. Request a fresh link and open it once, in this
+                  browser.
+                </p>
+                {searchParams.reason && (
+                  <p className="mt-2 font-mono text-xs text-red-600">
+                    reason: {searchParams.reason}
+                  </p>
+                )}
               </div>
             )}
 
