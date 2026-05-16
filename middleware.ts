@@ -36,7 +36,11 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
     }
 
     const { data: admin } = await supabase
@@ -49,7 +53,11 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       url.searchParams.set("error", "not_authorized");
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
     }
   }
 
