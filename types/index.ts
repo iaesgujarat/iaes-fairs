@@ -44,6 +44,11 @@ export interface Fair {
   gateway_activated_at?: string | null;
   gateway_activation_note?: string | null;
 
+  // ---- v9 campus host requests (optional until migration) ----
+  campus_host_requests_active?: boolean;
+  campus_host_activated_at?: string | null;
+  campus_host_activation_note?: string | null;
+
   // ---- v6 lifecycle (optional until DB migration adds the columns) ----
   status?: FairStatus;
   announced_at?: string | null;

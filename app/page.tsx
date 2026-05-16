@@ -145,7 +145,7 @@ function FairLanding({ fair }: { fair: Fair }) {
             </div>
 
             {showUniInstCTAs && (
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {/* Card 1: University */}
                 <div className="relative flex flex-col rounded-2xl border border-navy/10 bg-white p-8 shadow-card">
                   {pricing.isEarlyBird && pricing.earlybirdDeadline && (
@@ -274,6 +274,84 @@ function FairLanding({ fair }: { fair: Fair }) {
                   <p className="mt-3 text-center text-xs text-gray-400">
                     Confirmation email sent instantly
                   </p>
+                </div>
+
+                {/* Card 3: Campus Host (Indian HEI invites US reps) */}
+                <div className="flex flex-col rounded-2xl border border-navy/10 bg-white p-8 shadow-card">
+                  <div>
+                    <span className="text-2xl" aria-hidden>🏛️</span>
+                    <h3 className="mt-3 font-serif text-xl font-semibold text-navy">
+                      Host on Your Campus
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Indian higher-ed institution? Invite visiting U.S.
+                      university reps to come directly to your campus.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 rounded-xl bg-[#F5F7FA] p-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-navy">
+                        By invitation
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Enabled by IAES per fair, once visiting universities are
+                      confirmed
+                    </p>
+                  </div>
+
+                  <ul className="mt-4 space-y-1.5">
+                    {[
+                      "U.S. university reps visit your campus",
+                      "Curated to your students' study programs",
+                      "IAES coordinates the visit itinerary",
+                    ].map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-2 text-xs text-gray-500"
+                      >
+                        <span className="mt-0.5 text-gold" aria-hidden>✓</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {fair.campus_host_requests_active ? (
+                    <>
+                      <Link
+                        href="/register/campus-host"
+                        className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md border border-navy bg-white px-6 py-3 text-sm font-semibold text-navy shadow-card transition-colors hover:bg-navy hover:text-white"
+                      >
+                        Request a Campus Visit
+                        <span aria-hidden>&rarr;</span>
+                      </Link>
+                      <p className="mt-3 text-center text-xs text-gray-400">
+                        IAES reviews each request and confirms by email
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        aria-disabled="true"
+                        className="mt-8 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-navy/15 bg-[#F5F7FA] px-6 py-3 text-sm font-semibold text-navy/40"
+                      >
+                        Request a Campus Visit
+                      </div>
+                      <p className="mt-3 text-center text-xs text-gray-400">
+                        This programme is activated by IAES once visiting
+                        universities and an itinerary are confirmed for the
+                        fair. To register interest, email{" "}
+                        <a
+                          href="mailto:eduadviser@iaesgujarat.org?subject=Campus%20Host%20Request%20%E2%80%94%20Interest"
+                          className="font-medium text-navy underline underline-offset-2"
+                        >
+                          eduadviser@iaesgujarat.org
+                        </a>
+                        .
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             )}

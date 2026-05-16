@@ -261,6 +261,61 @@ export type InstitutionRegistrationInput = z.infer<
 >;
 
 // ============================================================================
+// Campus Host Request (v9 — Indian HEI invites foreign university reps to
+// visit their campus. Free, single page, admin-activated, no payment.)
+// ============================================================================
+
+export const STUDY_PROGRAM_OPTIONS = [
+  "Engineering & Technology",
+  "Management & Business",
+  "Computer Science / IT",
+  "Health & Medical Sciences",
+  "Sciences",
+  "Arts, Humanities & Social Sciences",
+  "Law",
+  "Design & Architecture",
+  "Other",
+] as const;
+
+export const campusHostRequestSchema = z.object({
+  fair_id: z.uuid({ error: "Missing fair selection." }),
+  official_name: z
+    .string()
+    .min(2, "Name of the institution official is required.")
+    .max(120),
+  official_email: z.email("Please enter a valid official email address."),
+  official_phone: z
+    .string()
+    .min(6, "Phone number is required.")
+    .max(40),
+  institution_name: z
+    .string()
+    .min(2, "Name of the institution is required.")
+    .max(200),
+  website: z
+    .union([z.url("Please enter a valid URL (https://...)."), z.literal("")])
+    .optional(),
+  study_programs: z
+    .array(z.string())
+    .min(1, "Select at least one study program."),
+  approx_participants: z
+    .string()
+    .min(1, "Approx. participants is required.")
+    .max(40),
+  proposed_datetime: z
+    .string()
+    .min(3, "Proposed date and time is required.")
+    .max(200),
+  terms_accepted: z
+    .boolean()
+    .refine((v) => v === true, {
+      message: "Please accept the terms to continue.",
+    }),
+});
+
+export type CampusHostRequestInput = z.infer<typeof campusHostRequestSchema>;
+
+// ============================================================================
 // Student self-registration (v4 — free, single page, no payment)
 // ============================================================================
 
