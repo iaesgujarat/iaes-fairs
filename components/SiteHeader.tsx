@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 export function SiteHeader({ variant = "navy" }: { variant?: "navy" | "light" }) {
   const isNavy = variant === "navy";
@@ -11,10 +12,14 @@ export function SiteHeader({ variant = "navy" }: { variant?: "navy" | "light" })
       }
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="group flex items-baseline gap-2">
-          <span className="font-serif text-2xl font-semibold tracking-tight">
-            IAES
-          </span>
+        <Link href="/" className="group flex items-center gap-3">
+          <img
+            src={IAES_LOGO_PATH}
+            alt={IAES_LOGO_ALT}
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-full object-cover ring-1 ring-black/5"
+          />
           <span
             className={
               isNavy

@@ -1,4 +1,6 @@
 import * as React from "react";
+import { appUrl } from "@/lib/mailerHelpers";
+import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 /**
  * Shared chrome for transactional emails — navy header, white body,
@@ -59,6 +61,20 @@ export function MailerLayout({
                 borderRadius: "8px 8px 0 0",
               }}
             >
+              <img
+                src={`${appUrl()}${IAES_LOGO_PATH}`}
+                alt={IAES_LOGO_ALT}
+                width={48}
+                height={48}
+                style={{
+                  display: "block",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: "#fff",
+                  marginBottom: 14,
+                }}
+              />
               {eyebrow && (
                 <div
                   style={{

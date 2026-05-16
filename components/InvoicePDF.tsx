@@ -5,9 +5,11 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import { rupeesToWords } from "@/lib/invoice";
+import { IAES_LOGO_PATH } from "@/lib/brand";
 import type { Invoice, Registration, Fair, BillingDetails } from "@/types";
 import { BankDetailsPDF } from "./InvoiceView/BankDetailsPDF";
 
@@ -47,6 +49,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   brand: { fontSize: 22, fontWeight: 700, color: "#0B2B5C" },
+  logo: { width: 48, height: 48, marginBottom: 4 },
   brandSub: {
     fontSize: 8,
     letterSpacing: 1.5,
@@ -291,7 +294,7 @@ function InvoicePDFUsd({
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.brand}>IAES</Text>
+            <Image src={IAES_LOGO_PATH} style={styles.logo} />
             <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>INVOICE</Text>
@@ -438,7 +441,7 @@ function InvoicePDFInr({
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.brand}>IAES</Text>
+            <Image src={IAES_LOGO_PATH} style={styles.logo} />
             <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>TAX INVOICE</Text>

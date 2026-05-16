@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 export function SiteFooter() {
   return (
@@ -6,10 +7,14 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="grid gap-8 sm:grid-cols-3">
           <div>
-            <p className="font-serif text-xl font-semibold text-navy">
-              IAES
-            </p>
-            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gold-500">
+            <img
+              src={IAES_LOGO_PATH}
+              alt={IAES_LOGO_ALT}
+              width={56}
+              height={56}
+              className="h-14 w-14 rounded-full object-cover"
+            />
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-gold-500">
               Indo American Education Society
             </p>
             <p className="mt-3 text-sm text-navy/70">

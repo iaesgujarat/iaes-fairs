@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent } from "@/components/ui/Card";
 import { AdminLoginForm } from "@/components/AdminLoginForm";
+import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 export default function AdminLoginPage({
   searchParams,
@@ -35,6 +36,13 @@ export default function AdminLoginPage({
         <Card>
           <CardContent className="space-y-6 px-8 py-10">
             <div>
+              <img
+                src={IAES_LOGO_PATH}
+                alt={IAES_LOGO_ALT}
+                width={56}
+                height={56}
+                className="mb-4 h-14 w-14 rounded-full object-cover"
+              />
               <p className="text-xs uppercase tracking-[0.18em] text-gold-500">
                 IAES Admin
               </p>

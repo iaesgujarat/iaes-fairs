@@ -2,6 +2,7 @@ import { formatINR, formatDateShort } from "@/lib/utils";
 import { rupeesToWords } from "@/lib/invoice";
 import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 import { BankDetailsHTML } from "./BankDetailsHTML";
+import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 interface Props {
   registration: Registration;
@@ -26,8 +27,14 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-6 border-b border-navy/10 pb-6">
         <div>
-          <p className="font-serif text-2xl font-semibold text-navy">IAES</p>
-          <p className="mt-0.5 text-xs uppercase tracking-[0.18em] text-gold-500">
+          <img
+            src={IAES_LOGO_PATH}
+            alt={IAES_LOGO_ALT}
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-full object-cover"
+          />
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gold-500">
             EducationUSA Fairs &middot; Gujarat
           </p>
         </div>

@@ -5,10 +5,12 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Invoice, Registration, Fair } from "@/types";
 import { BankDetailsPDF } from "./BankDetailsPDF";
+import { IAES_LOGO_PATH } from "@/lib/brand";
 
 interface Props {
   registration: Registration;
@@ -44,6 +46,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   brand: { fontSize: 22, fontWeight: 700, color: "#0B2B5C" },
+  logo: { width: 48, height: 48, marginBottom: 4 },
   brandSub: {
     fontSize: 8,
     letterSpacing: 1.5,
@@ -191,7 +194,7 @@ export function ProformaInvoicePDF({ registration, invoice, fair }: Props) {
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.brand}>IAES</Text>
+            <Image src={IAES_LOGO_PATH} style={styles.logo} />
             <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
           </View>
           <View>
