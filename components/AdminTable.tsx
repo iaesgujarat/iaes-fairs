@@ -70,12 +70,23 @@ export function AdminTable({ rows }: { rows: Row[] }) {
   const [statusFilter, setStatusFilter] = useState<
     RegistrationStatus | "all"
   >("all");
+  const [tierFilter, setTierFilter] = useState<
+    "all" | "EARLYBIRD" | "STANDARD" | "PREMIUM" | "LOGO_PENDING"
+  >("all");
   const [updating, setUpdating] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (tierFilter !== "all") {
+        if (tierFilter === "LOGO_PENDING") {
+          if (!(r.pricing_tier === "PREMIUM" && !r.backdrop_received))
+            return false;
+        } else if (r.pricing_tier !== tierFilter) {
+          return false;
+        }
+      }
       if (!q) return true;
       return (
         r.university_name.toLowerCase().includes(q) ||
@@ -84,7 +95,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
         (r.invoices?.[0]?.invoice_number || "").toLowerCase().includes(q)
       );
     });
-  }, [rows, query, statusFilter]);
+  }, [rows, query, statusFilter, tierFilter]);
 
   async function markConfirmed(registrationId: string) {
     setUpdating(registrationId);
@@ -144,6 +155,26 @@ export function AdminTable({ rows }: { rows: Row[] }) {
               {s === "all" ? "All statuses" : s.replace("_", " ")}
             </option>
           ))}
+        </select>
+        <select
+          className="rounded-md border border-navy/15 bg-white px-3 py-2.5 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
+          value={tierFilter}
+          onChange={(e) =>
+            setTierFilter(
+              e.target.value as
+                | "all"
+                | "EARLYBIRD"
+                | "STANDARD"
+                | "PREMIUM"
+                | "LOGO_PENDING"
+            )
+          }
+        >
+          <option value="all">All tiers</option>
+          <option value="EARLYBIRD">Early Bird</option>
+          <option value="STANDARD">Standard</option>
+          <option value="PREMIUM">Premium</option>
+          <option value="LOGO_PENDING">⏳ Logo pending</option>
         </select>
       </div>
 
@@ -224,6 +255,31 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                     ) : (
                       <div className="text-xs text-navy/45">Base only</div>
                     )}
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={
+                          r.pricing_tier === "PREMIUM"
+                            ? "rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold text-navy"
+                            : "rounded-full bg-navy/10 px-1.5 py-0.5 text-[10px] font-semibold text-navy/70"
+                        }
+                      >
+                        {r.pricing_tier === "PREMIUM"
+                          ? "💎 PREMIUM"
+                          : r.pricing_tier === "EARLYBIRD"
+                          ? "EARLY BIRD"
+                          : "STANDARD"}
+                      </span>
+                      {r.pricing_tier === "PREMIUM" &&
+                        (r.backdrop_received ? (
+                          <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                            logo ✓
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                            logo ⏳
+                          </span>
+                        ))}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-navy/70">
                     {r.payment_currency}
@@ -288,6 +344,13 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                           Invoice
                         </Button>
                       </Link>
+                      {r.pricing_tier === "PREMIUM" && (
+                        <Link href={`/admin/registrations/${r.id}`}>
+                          <Button size="sm" variant="outline">
+                            Manage
+                          </Button>
+                        </Link>
+                      )}
                       {r.status !== "confirmed" && r.status !== "cancelled" && (
                         <Button
                           size="sm"

@@ -27,6 +27,14 @@ const editFairSchema = z
     price_earlybird_usd: z.number().positive().optional().or(z.literal(0)),
     price_earlybird_inr: z.number().positive().optional().or(z.literal(0)),
     max_universities: z.number().int().positive().optional(),
+    // v14 premium booth + add-on pool
+    price_premium_usd: z.number().positive().optional().or(z.literal(0)),
+    price_premium_inr: z.number().positive().optional().or(z.literal(0)),
+    premium_slots_total: z.number().int().nonnegative().optional(),
+    premium_deadline: z.iso.date().optional().or(z.literal("")),
+    addon_tables_pool: z.number().int().nonnegative().optional(),
+    max_addon_tables_per_reg: z.number().int().nonnegative().optional(),
+    max_tables_per_university: z.number().int().positive().optional(),
     includes: z.array(z.string()).optional(),
   })
   .strict();
@@ -87,6 +95,9 @@ export async function PUT(
     "earlybird_deadline",
     "price_earlybird_usd",
     "price_earlybird_inr",
+    "premium_deadline",
+    "price_premium_usd",
+    "price_premium_inr",
   ]) {
     if (update[k] === "" || update[k] === 0) update[k] = null;
   }

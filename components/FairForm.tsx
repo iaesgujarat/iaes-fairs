@@ -37,6 +37,15 @@ interface FormState {
   price_earlybird_inr: string;
   max_universities: string;
 
+  // v14 premium booth + add-on pool
+  price_premium_usd: string;
+  price_premium_inr: string;
+  premium_slots_total: string;
+  premium_deadline: string;
+  addon_tables_pool: string;
+  max_addon_tables_per_reg: string;
+  max_tables_per_university: string;
+
   includes: string[];
 }
 
@@ -63,6 +72,14 @@ function fromFair(fair: Fair): FormState {
     price_earlybird_usd: String(fair.price_earlybird_usd ?? ""),
     price_earlybird_inr: String(fair.price_earlybird_inr ?? ""),
     max_universities: String(fair.max_universities ?? 30),
+    price_premium_usd: String(fair.price_premium_usd ?? 2500),
+    price_premium_inr: String(fair.price_premium_inr ?? ""),
+    premium_slots_total: String(fair.premium_slots_total ?? 4),
+    premium_deadline:
+      fair.premium_deadline || fair.earlybird_deadline || "",
+    addon_tables_pool: String(fair.addon_tables_pool ?? 6),
+    max_addon_tables_per_reg: String(fair.max_addon_tables_per_reg ?? 1),
+    max_tables_per_university: String(fair.max_tables_per_university ?? 2),
     includes: (fair.includes && fair.includes.length > 0)
       ? fair.includes
       : DEFAULT_INCLUDES,
@@ -85,6 +102,13 @@ const EMPTY_STATE: FormState = {
   price_earlybird_usd: "",
   price_earlybird_inr: "",
   max_universities: "30",
+  price_premium_usd: "2500",
+  price_premium_inr: "",
+  premium_slots_total: "4",
+  premium_deadline: "",
+  addon_tables_pool: "6",
+  max_addon_tables_per_reg: "1",
+  max_tables_per_university: "2",
   includes: [...DEFAULT_INCLUDES],
 };
 
@@ -178,6 +202,16 @@ export function FairForm({ fair, mode }: Props) {
       price_standard_inr: psI,
       price_earlybird_usd: Number(state.price_earlybird_usd) || 0,
       price_earlybird_inr: Number(state.price_earlybird_inr) || 0,
+
+      price_premium_usd: Number(state.price_premium_usd) || 0,
+      price_premium_inr: Number(state.price_premium_inr) || 0,
+      premium_slots_total: Number(state.premium_slots_total) || 0,
+      premium_deadline: state.premium_deadline || "",
+      addon_tables_pool: Number(state.addon_tables_pool) || 0,
+      max_addon_tables_per_reg:
+        Number(state.max_addon_tables_per_reg) || 0,
+      max_tables_per_university:
+        Number(state.max_tables_per_university) || 0,
 
       max_universities: Number(state.max_universities) || 30,
       includes,
@@ -351,8 +385,88 @@ export function FairForm({ fair, mode }: Props) {
         />
       </Section>
 
-      {/* Section 4 — includes */}
-      <Section title="4. What's Included">
+      {/* Section 4 — premium booth + table pool (v14) */}
+      <Section title="4. Premium Booth & Table Pool">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Input
+            type="number"
+            label="Premium Rate (USD)"
+            min={0}
+            step="0.01"
+            value={state.price_premium_usd}
+            onChange={(e) => setField("price_premium_usd", e.target.value)}
+            hint="Flat fee. Leave 0 to hide the Premium tier."
+          />
+          <Input
+            type="number"
+            label="Premium Rate (INR)"
+            min={0}
+            step="0.01"
+            value={state.price_premium_inr}
+            onChange={(e) => setField("price_premium_inr", e.target.value)}
+          />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Input
+            type="number"
+            label="Premium Slots Total"
+            min={0}
+            value={state.premium_slots_total}
+            onChange={(e) =>
+              setField("premium_slots_total", e.target.value)
+            }
+          />
+          <Input
+            type="date"
+            label="Premium Deadline"
+            value={state.premium_deadline}
+            onChange={(e) => setField("premium_deadline", e.target.value)}
+            hint="Should equal the Early Bird deadline (6+ weeks prep)."
+          />
+        </div>
+        {state.premium_deadline &&
+          state.earlybird_deadline &&
+          state.premium_deadline !== state.earlybird_deadline && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              ⚠️ Premium deadline differs from the Early Bird deadline
+              ({state.earlybird_deadline}). Logistics (print ads,
+              backdrops) need 6+ weeks — set them equal unless you have a
+              specific reason.
+            </div>
+          )}
+        <div className="grid gap-5 sm:grid-cols-3">
+          <Input
+            type="number"
+            label="Add-on Tables Pool"
+            min={0}
+            value={state.addon_tables_pool}
+            onChange={(e) => setField("addon_tables_pool", e.target.value)}
+            hint="Shared across non-premium regs."
+          />
+          <Input
+            type="number"
+            label="Max Add-on / Reg"
+            min={0}
+            value={state.max_addon_tables_per_reg}
+            onChange={(e) =>
+              setField("max_addon_tables_per_reg", e.target.value)
+            }
+          />
+          <Input
+            type="number"
+            label="Max Tables / University"
+            min={1}
+            value={state.max_tables_per_university}
+            onChange={(e) =>
+              setField("max_tables_per_university", e.target.value)
+            }
+            hint="Premium tables are separate (not from the pool)."
+          />
+        </div>
+      </Section>
+
+      {/* Section 5 — includes */}
+      <Section title="5. What's Included">
         <div className="space-y-2">
           {state.includes.map((item, i) => (
             <div key={i} className="flex items-center gap-2">

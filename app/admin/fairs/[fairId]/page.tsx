@@ -70,6 +70,8 @@ export default async function FairControlPanel({
     { data: regs },
     { count: passCount },
     { data: stopsData },
+    { data: premiumStatus },
+    { data: tableSummary },
   ] = await Promise.all([
     supabase.from("fairs").select("*").eq("id", params.fairId).maybeSingle(),
     supabase
@@ -93,7 +95,33 @@ export default async function FairControlPanel({
       .select("*")
       .eq("fair_id", params.fairId)
       .order("sort_order", { ascending: true }),
+    supabase
+      .from("premium_slot_status")
+      .select("premium_slots_total, slots_taken, slots_remaining")
+      .eq("fair_id", params.fairId)
+      .maybeSingle(),
+    supabase
+      .from("fair_table_summary")
+      .select(
+        "premium_tables_in_use, standard_base_tables, addon_tables_taken, addon_tables_pool, total_tables_in_use"
+      )
+      .eq("fair_id", params.fairId)
+      .maybeSingle(),
   ]);
+
+  // v14 — null pre-migration / no premium rows; cards degrade.
+  const premium = premiumStatus as {
+    premium_slots_total: number;
+    slots_taken: number;
+    slots_remaining: number;
+  } | null;
+  const tables = tableSummary as {
+    premium_tables_in_use: number;
+    standard_base_tables: number;
+    addon_tables_taken: number;
+    addon_tables_pool: number;
+    total_tables_in_use: number;
+  } | null;
 
   // Empty if the fair_itinerary table isn't migrated yet — never throws.
   const itineraryStops = (stopsData as FairItineraryStop[] | null) ?? [];
@@ -319,6 +347,113 @@ export default async function FairControlPanel({
             </li>
           </ul>
         </div>
+
+        {/* Premium booth status (v14) */}
+        {premium && (
+          <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-wider text-navy/55">
+                Premium Booth Status
+              </p>
+              <Link
+                href={`/admin/fairs/${f.id}/edit`}
+                className="text-xs font-medium text-navy/70 hover:text-navy"
+              >
+                Edit pricing / slots →
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-4 text-sm sm:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Slots
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {premium.slots_taken} / {premium.premium_slots_total} taken
+                </p>
+                <p
+                  className={
+                    premium.slots_remaining <= 0
+                      ? "text-xs font-medium text-red-600"
+                      : "text-xs text-navy/55"
+                  }
+                >
+                  {premium.slots_remaining <= 0
+                    ? "Sold out"
+                    : `${premium.slots_remaining} remaining`}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Price
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {f.price_premium_usd
+                    ? formatUSD(Number(f.price_premium_usd))
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Logo deadline
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {f.premium_deadline
+                    ? formatDateShort(f.premium_deadline)
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Table pool status (v14) */}
+        {tables && (
+          <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">
+            <p className="text-xs uppercase tracking-wider text-navy/55">
+              Table Pool Status
+            </p>
+            <div className="mt-3 grid gap-4 text-sm text-navy/85 sm:grid-cols-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Premium tables
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {tables.premium_tables_in_use}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Standard base
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {tables.standard_base_tables}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Add-ons taken
+                </p>
+                <p
+                  className={
+                    tables.addon_tables_taken >= tables.addon_tables_pool
+                      ? "mt-1 font-serif text-xl font-semibold text-red-600"
+                      : "mt-1 font-serif text-xl font-semibold text-navy"
+                  }
+                >
+                  {tables.addon_tables_taken} / {tables.addon_tables_pool}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-navy/55">
+                  Total in use
+                </p>
+                <p className="mt-1 font-serif text-xl font-semibold text-navy">
+                  {tables.total_tables_in_use}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Itinerary summary */}
         <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">

@@ -1,7 +1,94 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { concludeFairById } from "@/lib/concludeFair";
+import { getResend, FROM_EMAIL } from "@/lib/resend";
+import { LogoReminderEmail } from "@/emails/LogoReminderEmail";
 import type { Fair, FairStatus } from "@/types";
+
+interface PendingLogoRow {
+  id: string;
+  contact_name: string;
+  contact_email: string;
+  university_name: string;
+  fair:
+    | { name: string; premium_deadline: string | null }
+    | { name: string; premium_deadline: string | null }[]
+    | null;
+}
+
+/**
+ * Premium logo chase — fires once, 7+ days after registration, if the
+ * logo still isn't in and the premium deadline hasn't passed. Runs
+ * daily alongside auto-conclude; best-effort, never blocks it.
+ */
+async function sendPendingLogoReminders(
+  supabase: SupabaseClient
+): Promise<{ sent: number; failed: number }> {
+  if (!process.env.RESEND_API_KEY) return { sent: 0, failed: 0 };
+
+  const sevenDaysAgo = new Date(
+    Date.now() - 7 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const { data } = await supabase
+    .from("registrations")
+    .select(
+      `id, contact_name, contact_email, university_name,
+       fair:fairs(name, premium_deadline)`
+    )
+    .eq("pricing_tier", "PREMIUM")
+    .eq("backdrop_received", false)
+    .is("logo_reminder_sent_at", null)
+    .neq("status", "cancelled")
+    .lt("created_at", sevenDaysAgo);
+
+  const rows = (data as PendingLogoRow[] | null) ?? [];
+  if (rows.length === 0) return { sent: 0, failed: 0 };
+
+  const resend = getResend();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let sent = 0;
+  let failed = 0;
+
+  for (const r of rows) {
+    const fair = Array.isArray(r.fair) ? r.fair[0] : r.fair;
+    if (fair?.premium_deadline) {
+      const dl = new Date(fair.premium_deadline);
+      dl.setHours(0, 0, 0, 0);
+      if (today.getTime() > dl.getTime()) continue; // deadline passed
+    }
+    if (!r.contact_email) continue;
+    try {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: r.contact_email,
+        subject: `⏰ Logo Still Pending — ${
+          fair?.name ?? "IAES Fair"
+        } | ${r.university_name}`,
+        react: LogoReminderEmail({
+          contactName: r.contact_name,
+          universityName: r.university_name,
+          fairName: fair?.name ?? "IAES Fair",
+          premiumDeadline: fair?.premium_deadline ?? null,
+        }),
+      });
+      await supabase
+        .from("registrations")
+        .update({ logo_reminder_sent_at: new Date().toISOString() })
+        .eq("id", r.id);
+      sent++;
+    } catch (e) {
+      failed++;
+      console.error(
+        `[logo-reminder] failed for ${r.contact_email}:`,
+        e
+      );
+    }
+  }
+  return { sent, failed };
+}
 
 export const runtime = "nodejs";
 
@@ -81,6 +168,14 @@ async function run(req: Request): Promise<Response> {
     }
   }
 
+  // Premium logo chase — best-effort, never blocks auto-conclude.
+  let logoReminders = { sent: 0, failed: 0 };
+  try {
+    logoReminders = await sendPendingLogoReminders(supabase);
+  } catch (e) {
+    console.error("[logo-reminder] batch failed:", e);
+  }
+
   return NextResponse.json({
     ok: true,
     checkedAt: new Date().toISOString(),
@@ -88,6 +183,7 @@ async function run(req: Request): Promise<Response> {
     ongoingChecked: (data as Fair[] | null)?.length ?? 0,
     dueToConclude: due.length,
     results,
+    logoReminders,
   });
 }
 
