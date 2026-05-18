@@ -98,7 +98,16 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
           <Meta
             label="Forex Rate"
             value={`1 USD = ₹${Number(invoice.forex_rate_used).toFixed(2)}`}
-            sub={`as on ${formatDateShort(invoice.forex_rate_date)}`}
+            sub={
+              `as on ${formatDateShort(invoice.forex_rate_date)}` +
+              (invoice.forex_rate_time
+                ? ` · ${invoice.forex_rate_time} IST`
+                : "") +
+              (invoice.forex_rate_source
+                ? ` · ${invoice.forex_rate_source}`
+                : "") +
+              " · per CGST Rule 34(2) (GAAP, export of service), locked at invoice generation"
+            }
           />
         )}
       </div>

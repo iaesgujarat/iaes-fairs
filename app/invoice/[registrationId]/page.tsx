@@ -273,10 +273,18 @@ function ProformaView({
               ? `1 USD ≈ ₹${Number(invoice.forex_rate_used).toFixed(2)} `
               : ""}
             {invoice.forex_rate_date
-              ? `(as on ${formatDateShort(invoice.forex_rate_date)})`
+              ? `(as on ${formatDateShort(invoice.forex_rate_date)}${
+                  invoice.forex_rate_time
+                    ? ` ${invoice.forex_rate_time} IST`
+                    : ""
+                }${
+                  invoice.forex_rate_source
+                    ? ` · ${invoice.forex_rate_source}`
+                    : ""
+                })`
               : ""}
             . Final amount + GST will be locked at the live rate on the date
-            of payment.
+            of payment, per CGST Rule 34(2) (GAAP, export of service).
           </p>
         </div>
       )}

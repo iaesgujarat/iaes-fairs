@@ -5,7 +5,7 @@ import { InvoiceEmail } from "@/emails/InvoiceEmail";
 import { ProformaEmail } from "@/emails/ProformaEmail";
 import { PremiumConfirmationEmail } from "@/emails/PremiumConfirmationEmail";
 import { buildInvoiceFields, generateProformaReference } from "@/lib/invoice";
-import { getLiveForexRate } from "@/lib/forex";
+import { getLiveForexRate, type ForexRate } from "@/lib/forex";
 import { getFairPricing } from "@/lib/pricing";
 import {
   calculateBoothPricing,
@@ -258,7 +258,7 @@ export async function POST(req: Request) {
   // GATEWAY OFF — Proforma path
   // ============================================================
   if (!gatewayActive) {
-    let indicativeForex: { rate: number; date: string } | null = null;
+    let indicativeForex: ForexRate | null = null;
     if (input.payment_currency === "INR") {
       indicativeForex = await getLiveForexRate();
     }
@@ -278,6 +278,8 @@ export async function POST(req: Request) {
         payment_currency: input.payment_currency,
         forex_rate_used: indicativeForex?.rate ?? null,
         forex_rate_date: indicativeForex?.date ?? null,
+        forex_rate_source: indicativeForex?.source ?? null,
+        forex_rate_time: indicativeForex?.time ?? null,
         base_amount_usd: boothTotalUSD,
         base_amount_inr: indicativeINR,
         gst_type: "NONE",

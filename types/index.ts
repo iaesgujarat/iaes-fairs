@@ -321,6 +321,9 @@ export interface Invoice {
   payment_currency: Currency;
   forex_rate_used: number | null;
   forex_rate_date: string | null;
+  // forex provenance (optional until migration 0020)
+  forex_rate_source?: string | null;
+  forex_rate_time?: string | null;
 
   base_amount_usd: number;
   base_amount_inr: number | null;

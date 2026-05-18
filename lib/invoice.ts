@@ -40,6 +40,8 @@ export async function buildInvoiceFields(input: BuildInvoiceFieldsInput): Promis
     payment_currency: Currency;
     forex_rate_used: number | null;
     forex_rate_date: string | null;
+    forex_rate_source: string | null;
+    forex_rate_time: string | null;
     base_amount_usd: number;
     base_amount_inr: number | null;
     gst_type: GSTCalculation["gstType"];
@@ -70,6 +72,8 @@ export async function buildInvoiceFields(input: BuildInvoiceFieldsInput): Promis
       payment_currency: input.paymentCurrency,
       forex_rate_used: isINR ? forex.rate : null,
       forex_rate_date: isINR ? forex.date : null,
+      forex_rate_source: isINR ? forex.source : null,
+      forex_rate_time: isINR ? forex.time : null,
       base_amount_usd: gst.baseAmountUSD,
       base_amount_inr: isINR ? gst.baseAmountINR : null,
       gst_type: gst.gstType,

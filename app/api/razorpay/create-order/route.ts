@@ -101,10 +101,14 @@ export async function POST(req: Request) {
     const baseUSD = Number(invoice.base_amount_usd ?? 0);
     let forexRate: number | null = null;
     let forexDate: string | null = null;
+    let forexSource: string | null = null;
+    let forexTime: string | null = null;
     if (currency === "INR") {
       const live = await getLiveForexRate();
       forexRate = live.rate;
       forexDate = live.date;
+      forexSource = live.source;
+      forexTime = live.time;
     }
     const gst = calculateGST(
       currency,
@@ -117,6 +121,8 @@ export async function POST(req: Request) {
     const snapshot = {
       forex_rate_used: forexRate,
       forex_rate_date: forexDate,
+      forex_rate_source: forexSource,
+      forex_rate_time: forexTime,
       base_amount_usd: gst.baseAmountUSD,
       base_amount_inr: currency === "INR" ? gst.baseAmountINR : null,
       gst_type: gst.gstType,

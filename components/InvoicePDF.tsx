@@ -547,6 +547,14 @@ function InvoicePDFInr({
               </Text>
               <Text style={[styles.partyLine, { fontSize: 7 }]}>
                 as on {fmtDate(invoice.forex_rate_date)}
+                {invoice.forex_rate_time
+                  ? ` · ${invoice.forex_rate_time} IST`
+                  : ""}
+                {invoice.forex_rate_source
+                  ? `\n${invoice.forex_rate_source}`
+                  : ""}
+                {"\n"}Per CGST Rule 34(2) (GAAP, export of service) —
+                locked at invoice generation, immutable.
               </Text>
             </View>
           )}

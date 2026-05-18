@@ -115,6 +115,8 @@ export async function processSuccessfulPayment(
       payment_currency: source.payment_currency,
       forex_rate_used: source.forex_rate_used,
       forex_rate_date: source.forex_rate_date,
+      forex_rate_source: source.forex_rate_source ?? null,
+      forex_rate_time: source.forex_rate_time ?? null,
       base_amount_usd: source.base_amount_usd,
       base_amount_inr: source.base_amount_inr,
       gst_type: source.gst_type,

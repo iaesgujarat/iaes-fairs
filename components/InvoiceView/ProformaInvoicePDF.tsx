@@ -338,11 +338,19 @@ export function ProformaInvoicePDF({
               {invoice.forex_rate_used && invoice.forex_rate_date && (
                 <>
                   {" "}(at 1 USD = ₹{Number(invoice.forex_rate_used).toFixed(2)}{" "}
-                  on {fmtDate(invoice.forex_rate_date)})
+                  on {fmtDate(invoice.forex_rate_date)}
+                  {invoice.forex_rate_time
+                    ? ` ${invoice.forex_rate_time} IST`
+                    : ""}
+                  {invoice.forex_rate_source
+                    ? ` · ${invoice.forex_rate_source}`
+                    : ""}
+                  )
                 </>
               )}
               .{"\n"}* Indicative only. Final INR amount and GST (18%) are
-              calculated at the live forex rate on the date of payment.
+              calculated at the live forex rate on the date of payment,
+              determined per CGST Rule 34(2) (GAAP, export of service).
             </Text>
           </View>
         )}
