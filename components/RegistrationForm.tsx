@@ -441,6 +441,7 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
           setValue={setValue}
           fair={fair}
           boothPriceUSD={effectiveBoothUSD}
+          selectedTier={selectedTier}
           submitting={submitting}
           submitError={submitError}
           onBack={() => setStep(1)}
@@ -466,6 +467,7 @@ function Step3Payment({
   setValue,
   fair,
   boothPriceUSD,
+  selectedTier,
   submitting,
   submitError,
   onBack,
@@ -480,11 +482,15 @@ function Step3Payment({
   /** Effective amount billed in USD — premium flat fee, or base +
    *  add-ons (parity with the server / generated proforma). */
   boothPriceUSD: number;
+  selectedTier: PricingTier;
   submitting: boolean;
   submitError: string | null;
   onBack: () => void;
 }) {
   void fair;
+  // Confirm the chosen tier right at the pay-commit moment.
+  const isPrem = selectedTier === "PREMIUM";
+  const boothLabel = isPrem ? "💎 Premium Booth" : "Booth Fee";
   const [forex, setForex] = useState<{ rate: number; date: string } | null>(null);
   const [forexLoading, setForexLoading] = useState(false);
 
@@ -545,6 +551,11 @@ function Step3Payment({
               Recommended for US offices. No GST applicable (export of service).
             </p>
             <p className="mt-2 text-sm font-semibold text-navy">
+              {isPrem && (
+                <span className="mr-1 text-gold-600">
+                  💎 Premium Booth ·
+                </span>
+              )}
               {formatUSD(boothPriceUSD)}
             </p>
           </label>
@@ -562,6 +573,11 @@ function Step3Payment({
               For India-based offices. GST applicable as per Indian tax law.
             </p>
             <p className="mt-2 text-sm font-semibold text-navy">
+              {isPrem && (
+                <span className="mr-1 text-gold-600">
+                  💎 Premium Booth ·
+                </span>
+              )}
               {forex
                 ? formatINR(boothPriceUSD * forex.rate)
                 : "Fetching today's rate..."}
@@ -686,7 +702,7 @@ function Step3Payment({
               </p>
             ) : (
               <div className="mt-3 space-y-1.5 text-sm">
-                <Row label="Booth Fee" value={formatUSD(boothPriceUSD)} />
+                <Row label={boothLabel} value={formatUSD(boothPriceUSD)} />
                 <Row
                   label="Forex Rate"
                   value={`1 USD = ₹${forex.rate.toFixed(2)}`}
