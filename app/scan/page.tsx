@@ -24,6 +24,7 @@ export default function ScanLandingPage() {
   const [manualPassNumber, setManualPassNumber] = useState("");
   const [manualPassError, setManualPassError] = useState<string | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -33,6 +34,28 @@ export default function ScanLandingPage() {
       /* ignore parse errors */
     }
   }, []);
+
+  // Live "N contacts saved" badge. Refreshes whenever the scanner home
+  // mounts (rep returns here after each save), so it stays current.
+  useEffect(() => {
+    if (!identity) return;
+    let cancelled = false;
+    fetch(
+      `/api/scan/count?reg=${encodeURIComponent(identity.registrationId)}`
+    )
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && typeof d?.count === "number") {
+          setSavedCount(d.count);
+        }
+      })
+      .catch(() => {
+        /* badge is best-effort — never block scanning */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identity]);
 
   async function lookup(e: React.FormEvent) {
     e.preventDefault();
@@ -174,6 +197,11 @@ export default function ScanLandingPage() {
               {identity.universityName}
             </p>
             <p className="text-white/55">{identity.invoiceNumber}</p>
+            {savedCount !== null && (
+              <p className="mt-0.5 font-medium text-gold">
+                {savedCount} contact{savedCount === 1 ? "" : "s"} saved
+              </p>
+            )}
           </div>
           <button
             onClick={signOut}
@@ -227,7 +255,8 @@ export default function ScanLandingPage() {
           href={`/portal/${identity.registrationId}/students`}
           className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
         >
-          📋 View &amp; export my saved list
+          View My Saved List
+          {savedCount !== null ? ` (${savedCount})` : ""} &rarr;
         </Link>
       </div>
     </main>
