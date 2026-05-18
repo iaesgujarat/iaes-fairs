@@ -202,7 +202,7 @@ export function ProformaInvoicePDF({
         <View style={styles.headerRow}>
           <View>
             <Image src={IAES_LOGO_PATH} style={styles.logo} />
-            <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
+            <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <View>
             <Text style={styles.proformaLabel}>PROFORMA INVOICE</Text>

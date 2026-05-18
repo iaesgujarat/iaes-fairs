@@ -156,7 +156,7 @@ function ProformaView({
         <div>
           <p className="font-serif text-2xl font-semibold text-navy">IAES</p>
           <p className="mt-0.5 text-xs uppercase tracking-[0.18em] text-gold-500">
-            EducationUSA Fairs &middot; Gujarat
+            International Education Fairs &middot; Gujarat
           </p>
         </div>
         <div className="text-right">

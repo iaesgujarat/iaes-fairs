@@ -87,7 +87,7 @@ export function FairDetails({ fair }: { fair: Fair }) {
           </h2>
           <p className="mt-3 max-w-3xl text-base leading-relaxed text-navy/75">
             {fair.description ||
-              "IAES (Indo American Education Society) is a not-for-profit institution advancing U.S. – India education exchange from Gujarat. Our annual EducationUSA Fair connects accredited American universities with top student talent across Western India – students who arrive screened, prepared and ready to engage."}
+              "IAES (Indo American Education Society) is a not-for-profit institution advancing U.S. – India education exchange from Gujarat. Our annual international education fair connects accredited American universities with top student talent across Western India – students who arrive screened, prepared and ready to engage."}
           </p>
           <ul className="mt-6 grid gap-3 text-sm text-navy/80 sm:grid-cols-2">
             <li className="flex gap-2">

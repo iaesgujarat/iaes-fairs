@@ -313,7 +313,7 @@ function InvoicePDFUsd({
         <View style={styles.headerRow}>
           <View>
             <Image src={IAES_LOGO_PATH} style={styles.logo} />
-            <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
+            <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>INVOICE</Text>
         </View>
@@ -468,7 +468,7 @@ function InvoicePDFInr({
         <View style={styles.headerRow}>
           <View>
             <Image src={IAES_LOGO_PATH} style={styles.logo} />
-            <Text style={styles.brandSub}>EducationUSA Fairs · Gujarat</Text>
+            <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>TAX INVOICE</Text>
         </View>

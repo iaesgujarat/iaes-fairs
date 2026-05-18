@@ -17,9 +17,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "IAES | EducationUSA Fairs",
+  title: "IAES | International Education Fairs",
   description:
-    "Official IAES platform for U.S. university registration at EducationUSA Fairs in Gujarat.",
+    "Official IAES platform for U.S. university registration at International Education Fairs in Gujarat.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || "https://fairs.iaesgujarat.org"
   ),

@@ -66,7 +66,7 @@ export function PaymentButton({
       key: order.key,
       amount: order.amount,
       currency: order.currency,
-      name: "IAES EducationUSA Fair",
+      name: "IAES International Education Fair",
       description: `Booth Registration — ${fairName}`,
       order_id: order.orderId,
       prefill: order.prefill,

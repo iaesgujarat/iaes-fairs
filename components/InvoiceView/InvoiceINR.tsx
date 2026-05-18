@@ -35,7 +35,7 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
             className="h-14 w-14 rounded-full object-cover"
           />
           <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gold-500">
-            EducationUSA Fairs &middot; Gujarat
+            International Education Fairs &middot; Gujarat
           </p>
         </div>
         <p className="font-serif text-2xl tracking-[0.18em] text-navy/70">

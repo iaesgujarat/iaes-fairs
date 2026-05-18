@@ -30,7 +30,7 @@ export function FairHero({ fair }: { fair: Fair }) {
       </div>
       <div className="relative mx-auto max-w-6xl px-6 py-20 sm:py-28">
         <p className="mb-3 text-xs uppercase tracking-[0.24em] text-gold">
-          Official EducationUSA Fair
+          IAES International Education Fair
         </p>
         <h1 className="max-w-3xl font-serif text-4xl font-semibold leading-tight tracking-tight text-balance sm:text-5xl md:text-6xl">
           {fair.name}
