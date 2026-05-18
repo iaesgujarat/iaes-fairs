@@ -4,6 +4,7 @@ import { FairHero } from "@/components/FairHero";
 import { FairDetails } from "@/components/FairDetails";
 import { FairItinerary } from "@/components/FairItinerary";
 import { FairCTASection } from "@/components/FairCTASection";
+import { AboutSociety } from "@/components/AboutSociety";
 import { BetweenFairsPage } from "@/components/BetweenFairsPage";
 import {
   getActiveFair,
@@ -77,6 +78,7 @@ function FairLanding({ fair }: { fair: Fair }) {
 
         <FairHero fair={fair} />
         <FairDetails fair={fair} />
+        <AboutSociety />
 
         {fair.itinerary && fair.itinerary.length > 0 && (
           <section className="mx-auto max-w-5xl px-6 py-14">
