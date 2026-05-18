@@ -45,9 +45,13 @@ export function SiteFooter() {
               Office
             </p>
             <p className="mt-2 text-sm text-navy/80">
-              IAES Resource Center
+              Indo American Education Society
               <br />
-              Ahmedabad, Gujarat, India
+              3rd Floor, 301-302, Sun Square
+              <br />
+              Navarangpura, Ahmedabad - 380009
+              <br />
+              Gujarat, India
             </p>
           </div>
         </div>

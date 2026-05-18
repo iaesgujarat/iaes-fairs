@@ -27,7 +27,7 @@ export function SiteHeader({ variant = "navy" }: { variant?: "navy" | "light" })
                 : "text-sm uppercase tracking-[0.18em] text-gold-500"
             }
           >
-            EducationUSA Fairs
+            IAES International Education Fairs
           </span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm sm:flex">
