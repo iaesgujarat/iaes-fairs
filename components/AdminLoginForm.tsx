@@ -6,37 +6,138 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
+type Phase = "request" | "verify";
+
+/**
+ * Admin sign-in via 6-digit email OTP.
+ *
+ * Primary path: signInWithOtp → email a code → verifyOtp({type:"email"}).
+ * verifyOtp needs NO PKCE code-verifier and NO redirect, so it is
+ * immune to the "link opened in a different browser / in-app webview /
+ * pre-fetched by a scanner" failure (pkce_code_verifier_not_found).
+ *
+ * We KEEP emailRedirectTo so the same email's magic link still works
+ * as a fallback (existing /auth/callback PKCE path unchanged) — purely
+ * additive, no lockout risk.
+ *
+ * NOTE: requires the Supabase "Magic Link" email template to include
+ * the code, e.g.  `{{ .Token }}`  — without it no code is emailed.
+ */
 export function AdminLoginForm() {
   const router = useRouter();
+  const [phase, setPhase] = useState<Phase>("request");
   const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function sendCode(e: React.FormEvent) {
     e.preventDefault();
-    setSending(true);
+    setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=/admin/dashboard`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: redirectTo,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/admin/dashboard`,
           shouldCreateUser: false,
         },
       });
       if (error) throw error;
-      router.replace("/admin/login?sent=1");
+      setPhase("verify");
+      setNotice(
+        "We emailed a 6-digit code (and a backup sign-in link). Enter the code below — it expires in 1 hour."
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not send magic link.");
+      setError(
+        e instanceof Error ? e.message : "Could not send the sign-in code."
+      );
     } finally {
-      setSending(false);
+      setBusy(false);
     }
   }
 
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const token = code.replace(/\D/g, "");
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "email",
+      });
+      if (error) throw error;
+      router.replace("/admin/dashboard");
+      router.refresh();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Invalid or expired code."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (phase === "verify") {
+    return (
+      <form onSubmit={verify} className="space-y-4">
+        {notice && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            {notice}
+          </div>
+        )}
+        <p className="text-sm text-navy/70">
+          Code sent to{" "}
+          <span className="font-medium text-navy">{email}</span>
+        </p>
+        <Input
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          label="6-digit code"
+          placeholder="••••••"
+          required
+          value={code}
+          onChange={(e) =>
+            setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+          }
+          error={error || undefined}
+          className="text-center text-2xl tracking-[0.5em]"
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          loading={busy}
+          className="w-full"
+        >
+          {busy ? "Verifying…" : "Verify & sign in"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => {
+            setPhase("request");
+            setCode("");
+            setError(null);
+            setNotice(null);
+          }}
+          className="block w-full text-center text-xs text-navy/55 hover:text-navy"
+        >
+          Use a different email / resend code
+        </button>
+      </form>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={sendCode} className="space-y-4">
       <Input
         type="email"
         label="Email address"
@@ -50,10 +151,10 @@ export function AdminLoginForm() {
         type="submit"
         variant="primary"
         size="lg"
-        loading={sending}
+        loading={busy}
         className="w-full"
       >
-        {sending ? "Sending link..." : "Send Magic Link"}
+        {busy ? "Sending code…" : "Email me a sign-in code"}
       </Button>
     </form>
   );
