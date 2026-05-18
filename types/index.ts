@@ -63,10 +63,17 @@ export interface Fair {
   // ---- v11 itinerary (populated when fetched alongside the fair) ----
   itinerary?: FairItineraryStop[];
 
-  // ---- post-fair stats (optional; only populated if a future
-  // migration adds these columns — UI hides the row when absent) ----
+  // ---- v13 auto-conclude (optional until migration 0018) ----
+  auto_concluded?: boolean;
+  thankyou_emails_sent_at?: string | null;
+
+  // ---- post-fair stats (cached at conclusion by v13; UI hides
+  // the row gracefully when absent / pre-migration) ----
   stat_universities_participated?: number | null;
   stat_students_attended?: number | null;
+  stat_booth_scans?: number | null;
+  stat_cities_visited?: number | null;
+  stat_cached_at?: string | null;
 }
 
 export interface WaitlistSignup {

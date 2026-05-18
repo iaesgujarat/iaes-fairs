@@ -439,7 +439,13 @@ export default async function FairControlPanel({
           earlybirdDeadline={f.earlybird_deadline ?? null}
           registrationDeadline={f.registration_deadline}
           fairDateStart={f.fair_date_start ?? f.fair_date}
+          fairDateEnd={f.fair_date_end ?? null}
           unpaidCount={unpaid}
+          autoConcluded={!!f.auto_concluded}
+          concludedAt={f.concluded_at ?? null}
+          thankyouSentAt={f.thankyou_emails_sent_at ?? null}
+          statUniversities={f.stat_universities_participated ?? null}
+          statStudents={f.stat_students_attended ?? null}
         />
 
         {/* Status history */}

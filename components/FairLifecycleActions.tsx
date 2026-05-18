@@ -12,7 +12,34 @@ interface Props {
   earlybirdDeadline?: string | null;
   registrationDeadline?: string | null;
   fairDateStart?: string | null;
+  fairDateEnd?: string | null;
   unpaidCount: number;
+  // v13 conclude status
+  autoConcluded?: boolean;
+  concludedAt?: string | null;
+  thankyouSentAt?: string | null;
+  statUniversities?: number | null;
+  statStudents?: number | null;
+}
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function nextDayLabel(end: string): string {
+  const d = new Date(end);
+  d.setDate(d.getDate() + 1);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 type ActionKind =
@@ -56,7 +83,13 @@ export function FairLifecycleActions({
   earlybirdDeadline,
   registrationDeadline,
   fairDateStart,
+  fairDateEnd,
   unpaidCount,
+  autoConcluded,
+  concludedAt,
+  thankyouSentAt,
+  statUniversities,
+  statStudents,
 }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<ActionKind | null>(null);
@@ -206,19 +239,52 @@ export function FairLifecycleActions({
         </StepButton>
       </Step>
 
-      {/* Conclude */}
+      {/* Conclude — auto at midnight IST; manual = emergency override */}
       <Step
         index={4}
         title="Conclude Fair"
-        description="Lock all registrations and enable post-fair data export."
+        description={
+          status === "COMPLETED"
+            ? "Concluded. Stats cached and thank-you emails sent."
+            : status === "ONGOING" && fairDateEnd
+            ? `Auto-concludes at midnight IST on ${nextDayLabel(
+                fairDateEnd
+              )}. Use the button only as an emergency override.`
+            : "Locks registrations, caches stats, and emails thank-yous to confirmed universities and checked-in students."
+        }
       >
-        <StepButton
-          disabled={!canTransition(status, "COMPLETED")}
-          onClick={() => setConfirming("conclude")}
-          loading={pending === "conclude"}
-        >
-          ✓ Conclude fair
-        </StepButton>
+        {status === "COMPLETED" ? (
+          <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm">
+            <p className="font-medium text-green-800">
+              {autoConcluded
+                ? "✅ Auto-concluded at midnight IST"
+                : "✅ Manually concluded"}
+              {concludedAt ? ` · ${fmtDateTime(concludedAt)}` : ""}
+            </p>
+            <p className="mt-1 text-xs text-green-700">
+              Thank-you emails:{" "}
+              {thankyouSentAt
+                ? `sent ${fmtDateTime(thankyouSentAt)}`
+                : "not recorded"}
+              {statUniversities != null
+                ? ` — ${statUniversities} universit${
+                    statUniversities === 1 ? "y" : "ies"
+                  }`
+                : ""}
+              {statStudents != null
+                ? ` + ${statStudents.toLocaleString("en-IN")} students`
+                : ""}
+            </p>
+          </div>
+        ) : (
+          <StepButton
+            disabled={!canTransition(status, "COMPLETED")}
+            onClick={() => setConfirming("conclude")}
+            loading={pending === "conclude"}
+          >
+            ✓ Conclude now
+          </StepButton>
+        )}
       </Step>
 
       {/* Archive */}
