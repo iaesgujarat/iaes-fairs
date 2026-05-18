@@ -375,6 +375,20 @@ function InvoicePDFUsd({
               registration.pricing_tier === "EARLYBIRD"
                 ? "Early Bird"
                 : "Standard";
+            if (registration.pricing_tier === "PREMIUM") {
+              return (
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Premium Booth — {fair.name}{"\n"}Includes: 2 Tables · 4
+                    Representatives · Branded Backdrop · Print Ad Placement ·
+                    Social Media Campaign · Vernacular Volunteer · Transport
+                    &amp; Meals
+                  </Text>
+                  <Text style={styles.cellAmount}>{fmtUSD(baseUSD)}</Text>
+                </View>
+              );
+            }
             return (
               <>
                 <View style={styles.tableRow}>
@@ -557,6 +571,25 @@ function InvoicePDFInr({
               registration.pricing_tier === "EARLYBIRD"
                 ? "Early Bird"
                 : "Standard";
+            if (registration.pricing_tier === "PREMIUM") {
+              return (
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Premium Booth — {fair.name}{"\n"}Includes: 2 Tables · 4
+                    Representatives · Branded Backdrop · Print Ad Placement ·
+                    Social Media Campaign · Vernacular Volunteer · Transport
+                    &amp; Meals
+                  </Text>
+                  <Text style={styles.cellRate}>
+                    USD {baseUSD.toFixed(2)}
+                  </Text>
+                  <Text style={styles.cellAmount}>
+                    {fmtINR(Number(invoice.base_amount_inr || 0))}
+                  </Text>
+                </View>
+              );
+            }
             return (
               <>
                 <View style={styles.tableRow}>

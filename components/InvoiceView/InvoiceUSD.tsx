@@ -103,49 +103,78 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-navy/10">
-              <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
-              <td className="px-4 py-3">
-                Fair Registration &mdash; {tierLabel}
-                <div className="text-xs text-navy/55">
-                  1 Counter · 2 Representatives ·{" "}
-                  {formatDateShort(
-                    (fair.fair_date_start || fair.fair_date) as string
-                  )}
-                  {fair.fair_date_end ? " onwards" : ""} · {fair.city}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-right">{formatUSD(baseUSD)}</td>
-            </tr>
-
-            {addonTables > 0 && (
+            {registration.pricing_tier === "PREMIUM" ? (
               <tr className="border-b border-navy/10">
-                <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
+                <td className="px-4 py-3 align-top text-navy/70">
+                  {IAES.sac}
+                </td>
                 <td className="px-4 py-3">
-                  Additional Table × {addonTables}
+                  Premium Booth &mdash; {fair.name}
                   <div className="text-xs text-navy/55">
-                    USD {extraTableUSD.toLocaleString()} per extra table
+                    Includes: 2 Tables · 4 Representatives · Branded Backdrop
+                    · Print Ad Placement · Social Media Campaign · Vernacular
+                    Volunteer · Transport &amp; Meals
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {formatUSD(addonTables * extraTableUSD)}
+                  {formatUSD(baseUSD)}
                 </td>
               </tr>
-            )}
+            ) : (
+              <>
+                <tr className="border-b border-navy/10">
+                  <td className="px-4 py-3 align-top text-navy/70">
+                    {IAES.sac}
+                  </td>
+                  <td className="px-4 py-3">
+                    Fair Registration &mdash; {tierLabel}
+                    <div className="text-xs text-navy/55">
+                      1 Counter · 2 Representatives ·{" "}
+                      {formatDateShort(
+                        (fair.fair_date_start || fair.fair_date) as string
+                      )}
+                      {fair.fair_date_end ? " onwards" : ""} · {fair.city}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {formatUSD(baseUSD)}
+                  </td>
+                </tr>
 
-            {addonReps > 0 && (
-              <tr className="border-b border-navy/10">
-                <td className="px-4 py-3 align-top text-navy/70">{IAES.sac}</td>
-                <td className="px-4 py-3">
-                  Additional Representative × {addonReps}
-                  <div className="text-xs text-navy/55">
-                    USD {extraRepUSD.toLocaleString()} per extra rep
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {formatUSD(addonReps * extraRepUSD)}
-                </td>
-              </tr>
+                {addonTables > 0 && (
+                  <tr className="border-b border-navy/10">
+                    <td className="px-4 py-3 align-top text-navy/70">
+                      {IAES.sac}
+                    </td>
+                    <td className="px-4 py-3">
+                      Additional Table × {addonTables}
+                      <div className="text-xs text-navy/55">
+                        USD {extraTableUSD.toLocaleString()} per extra table
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {formatUSD(addonTables * extraTableUSD)}
+                    </td>
+                  </tr>
+                )}
+
+                {addonReps > 0 && (
+                  <tr className="border-b border-navy/10">
+                    <td className="px-4 py-3 align-top text-navy/70">
+                      {IAES.sac}
+                    </td>
+                    <td className="px-4 py-3">
+                      Additional Representative × {addonReps}
+                      <div className="text-xs text-navy/55">
+                        USD {extraRepUSD.toLocaleString()} per extra rep
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {formatUSD(addonReps * extraRepUSD)}
+                    </td>
+                  </tr>
+                )}
+              </>
             )}
 
             <tr className="border-b border-navy/10 text-navy/70">

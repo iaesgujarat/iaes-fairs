@@ -269,34 +269,49 @@ export function ProformaInvoicePDF({
             <Text style={[styles.cellDesc, styles.th]}>Description</Text>
             <Text style={[styles.cellAmount, styles.th]}>Amount (USD)</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.cellSac}>{IAES.sac}</Text>
-            <Text style={styles.cellDesc}>
-              Fair Registration — {tierLabel} (1 Counter · 2 Reps)
-            </Text>
-            <Text style={styles.cellAmount}>{fmtUSD(baseUSD)}</Text>
-          </View>
-          {addonTables > 0 && (
+          {registration.pricing_tier === "PREMIUM" ? (
             <View style={styles.tableRow}>
               <Text style={styles.cellSac}>{IAES.sac}</Text>
               <Text style={styles.cellDesc}>
-                Additional Table × {addonTables}
+                Premium Booth — {fair.name}{"\n"}Includes: 2 Tables · 4
+                Representatives · Branded Backdrop · Print Ad Placement ·
+                Social Media Campaign · Vernacular Volunteer · Transport
+                &amp; Meals
               </Text>
-              <Text style={styles.cellAmount}>
-                {fmtUSD(addonTables * extraTableUSD)}
-              </Text>
+              <Text style={styles.cellAmount}>{fmtUSD(baseUSD)}</Text>
             </View>
-          )}
-          {addonReps > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={styles.cellSac}>{IAES.sac}</Text>
-              <Text style={styles.cellDesc}>
-                Additional Representative × {addonReps}
-              </Text>
-              <Text style={styles.cellAmount}>
-                {fmtUSD(addonReps * extraRepUSD)}
-              </Text>
-            </View>
+          ) : (
+            <>
+              <View style={styles.tableRow}>
+                <Text style={styles.cellSac}>{IAES.sac}</Text>
+                <Text style={styles.cellDesc}>
+                  Fair Registration — {tierLabel} (1 Counter · 2 Reps)
+                </Text>
+                <Text style={styles.cellAmount}>{fmtUSD(baseUSD)}</Text>
+              </View>
+              {addonTables > 0 && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Additional Table × {addonTables}
+                  </Text>
+                  <Text style={styles.cellAmount}>
+                    {fmtUSD(addonTables * extraTableUSD)}
+                  </Text>
+                </View>
+              )}
+              {addonReps > 0 && (
+                <View style={styles.tableRow}>
+                  <Text style={styles.cellSac}>{IAES.sac}</Text>
+                  <Text style={styles.cellDesc}>
+                    Additional Representative × {addonReps}
+                  </Text>
+                  <Text style={styles.cellAmount}>
+                    {fmtUSD(addonReps * extraRepUSD)}
+                  </Text>
+                </View>
+              )}
+            </>
           )}
           <View style={styles.tableRowTotal}>
             <Text style={styles.cellSac}> </Text>

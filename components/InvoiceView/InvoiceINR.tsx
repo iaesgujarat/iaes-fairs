@@ -136,6 +136,29 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
                 registration.pricing_tier === "EARLYBIRD"
                   ? "Early Bird"
                   : "Standard";
+              if (registration.pricing_tier === "PREMIUM") {
+                return (
+                  <tr className="border-b border-navy/10">
+                    <td className="px-4 py-3 align-top text-navy/70">
+                      {IAES.sac}
+                    </td>
+                    <td className="px-4 py-3">
+                      Premium Booth &mdash; {fair.name}
+                      <div className="text-xs text-navy/55">
+                        Includes: 2 Tables · 4 Representatives · Branded
+                        Backdrop · Print Ad Placement · Social Media Campaign
+                        · Vernacular Volunteer · Transport &amp; Meals
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-navy/70">
+                      USD {baseUSD.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {formatINR(Number(invoice.base_amount_inr || 0))}
+                    </td>
+                  </tr>
+                );
+              }
               return (
                 <>
                   <tr className="border-b border-navy/10">
