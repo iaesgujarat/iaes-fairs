@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   calculateBoothPricing,
   getMaxReps,
   BOOTH_DEFAULTS,
 } from "@/lib/booth";
+import type { AddonTableStatus } from "@/types";
 
 interface Props {
   /** Active per-booth fee (early-bird if applicable, else standard). */
@@ -18,6 +19,10 @@ interface Props {
   totalReps: number;
   /** Notify the parent when either value changes. */
   onChange: (next: { totalTables: number; totalReps: number }) => void;
+  /** v14 — when set, show the live shared add-on table pool counter
+   *  and cap extra tables at maxAddonTablesPerReg (Standard/EB only). */
+  fairId?: string;
+  maxAddonTablesPerReg?: number;
 }
 
 export function BoothConfigurator({
@@ -28,8 +33,43 @@ export function BoothConfigurator({
   totalTables,
   totalReps,
   onChange,
+  fairId,
+  maxAddonTablesPerReg = 1,
 }: Props) {
   const maxReps = getMaxReps(totalTables);
+
+  // v14 — live shared add-on table pool (Standard/Early-Bird only).
+  const [pool, setPool] = useState<AddonTableStatus | null>(null);
+  useEffect(() => {
+    if (!fairId) return;
+    let cancelled = false;
+    fetch(`/api/fairs/${fairId}/addon-table-status`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setPool({
+          fair_id: fairId,
+          addon_tables_pool: d?.pool ?? 0,
+          tables_taken: d?.taken ?? 0,
+          tables_remaining: d?.remaining ?? 0,
+          isPoolExhausted: !!d?.isPoolExhausted,
+        });
+      })
+      .catch(() => {
+        /* counter is UX-only; server enforces the real pool */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fairId]);
+
+  // Effective table ceiling: absolute cap, the per-reg add-on cap, and
+  // (when the pool is exhausted) no extra table at all.
+  const poolExhausted = !!fairId && pool?.isPoolExhausted === true;
+  const effectiveMaxTables = Math.min(
+    maxTables,
+    BOOTH_DEFAULTS.tables + (poolExhausted ? 0 : maxAddonTablesPerReg)
+  );
 
   // If the user reduces tables, auto-clamp reps to the new ceiling.
   useEffect(() => {
@@ -39,6 +79,15 @@ export function BoothConfigurator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxReps]);
 
+  // If the pool drains while a user has an extra table queued, clamp.
+  useEffect(() => {
+    if (totalTables > effectiveMaxTables) {
+      const t = effectiveMaxTables;
+      onChange({ totalTables: t, totalReps: Math.min(totalReps, t * 2) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveMaxTables]);
+
   const pricing = calculateBoothPricing(
     { totalTables, totalReps },
     basePriceUSD,
@@ -47,7 +96,10 @@ export function BoothConfigurator({
   );
 
   function setTables(v: number) {
-    const clamped = Math.min(Math.max(v, BOOTH_DEFAULTS.tables), maxTables);
+    const clamped = Math.min(
+      Math.max(v, BOOTH_DEFAULTS.tables),
+      effectiveMaxTables
+    );
     const newMaxReps = clamped * 2;
     const clampedReps = Math.min(totalReps, newMaxReps);
     onChange({ totalTables: clamped, totalReps: clampedReps });
@@ -74,17 +126,33 @@ export function BoothConfigurator({
         <div>
           <p className="text-sm font-medium text-navy">Tables / counters</p>
           <p className="mt-0.5 text-xs text-navy/55">
-            1 included · +USD {priceExtraTableUSD} per extra (max {maxTables})
+            1 included · +USD {priceExtraTableUSD} per extra (max{" "}
+            {effectiveMaxTables})
           </p>
         </div>
         <Stepper
           value={totalTables}
           min={BOOTH_DEFAULTS.tables}
-          max={maxTables}
+          max={effectiveMaxTables}
           onChange={setTables}
           ariaLabel="Number of tables"
         />
       </div>
+      {fairId && pool && (
+        <p
+          className={`-mt-3 text-xs font-medium ${
+            pool.isPoolExhausted
+              ? "text-red-600"
+              : pool.tables_remaining === 1
+              ? "text-orange-500"
+              : "text-navy/45"
+          }`}
+        >
+          {pool.isPoolExhausted
+            ? "⛔ No additional tables available for this fair"
+            : `${pool.tables_remaining} of ${pool.addon_tables_pool} extra table slots remaining`}
+        </p>
+      )}
       {pricing.addonTables > 0 && (
         <p className="-mt-3 text-xs font-medium text-gold-600">
           +{pricing.addonTables} extra table

@@ -39,6 +39,14 @@ export interface Fair {
   price_extra_rep_usd?: number;
   max_tables_per_university?: number;
 
+  // ---- v14 premium booth + add-on pool (optional until 0019) ----
+  price_premium_usd?: number | null;
+  price_premium_inr?: number | null;
+  premium_slots_total?: number;
+  premium_deadline?: string | null;
+  addon_tables_pool?: number;
+  max_addon_tables_per_reg?: number;
+
   // ---- v8 deferred payment gateway (optional until migration) ----
   payment_gateway_active?: boolean;
   gateway_activated_at?: string | null;
@@ -186,7 +194,33 @@ export type RegistrationStatus =
 
 export type BoothType = "Standard" | "Premium";
 
-export type PricingTier = "STANDARD" | "EARLYBIRD";
+export type PricingTier = "STANDARD" | "EARLYBIRD" | "PREMIUM";
+
+// v14 premium-slot / add-on-pool status (from DB views; counts only).
+export interface PremiumSlotStatus {
+  fair_id: string;
+  premium_slots_total: number;
+  slots_taken: number;
+  slots_remaining: number;
+  isSoldOut: boolean;
+}
+
+export interface AddonTableStatus {
+  fair_id: string;
+  addon_tables_pool: number;
+  tables_taken: number;
+  tables_remaining: number;
+  isPoolExhausted: boolean;
+}
+
+export interface FairTableSummary {
+  fair_id: string;
+  premium_tables_in_use: number;
+  standard_base_tables: number;
+  addon_tables_taken: number;
+  addon_tables_pool: number;
+  total_tables_in_use: number;
+}
 
 export interface Registration {
   id: string;
@@ -212,6 +246,11 @@ export interface Registration {
   terms_accepted: boolean;
   terms_accepted_at: string | null;
   terms_version: string | null;
+  // ---- v14 premium logo/backdrop (optional until 0019) ----
+  backdrop_png_url?: string | null;
+  backdrop_received?: boolean;
+  backdrop_received_at?: string | null;
+  logo_reminder_sent_at?: string | null;
   created_at: string;
   updated_at: string;
 }

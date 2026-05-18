@@ -16,8 +16,9 @@ import {
   FALLBACK_MAX_TABLES,
 } from "@/lib/booth";
 import { BoothConfigurator } from "@/components/BoothConfigurator";
+import { PricingCards } from "@/components/PricingCards";
 import { formatINR, formatUSD } from "@/lib/utils";
-import type { Fair } from "@/types";
+import type { Fair, PricingTier } from "@/types";
 
 const STEPS = ["University", "Contact", "Payment"] as const;
 
@@ -51,6 +52,7 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
       fair_id: fair.id,
       university_country: "USA",
       booth_type: "Standard",
+      pricing_tier: pricing.tier,
       number_of_reps: 2,
       total_tables: 1,
       total_reps: 2,
@@ -71,6 +73,30 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
     fair.price_extra_table_usd ?? FALLBACK_EXTRA_TABLE_USD;
   const extraRepUSD = fair.price_extra_rep_usd ?? FALLBACK_EXTRA_REP_USD;
   const maxTables = fair.max_tables_per_university ?? FALLBACK_MAX_TABLES;
+
+  // v14 — tier selection drives premium overrides + configurator visibility.
+  const [selectedTier, setSelectedTier] = useState<PricingTier>(pricing.tier);
+  const isPremium = selectedTier === "PREMIUM";
+
+  function selectTier(tier: PricingTier) {
+    setSelectedTier(tier);
+    setValue("pricing_tier", tier);
+    setValue("booth_type", tier === "PREMIUM" ? "Premium" : "Standard", {
+      shouldValidate: true,
+    });
+    if (tier === "PREMIUM") {
+      // Fixed package — 2 tables, 4 reps, no add-ons. Server re-asserts.
+      setValue("total_tables", 2, { shouldValidate: true });
+      setValue("total_reps", 4, { shouldValidate: true });
+      setValue("number_of_reps", 4);
+    } else {
+      // Reset to base so switching away from Premium never silently
+      // charges for the 2nd table / extra reps.
+      setValue("total_tables", 1, { shouldValidate: true });
+      setValue("total_reps", 2, { shouldValidate: true });
+      setValue("number_of_reps", 2);
+    }
+  }
 
   async function goNext() {
     let fields: (keyof RegistrationInput)[];
@@ -128,6 +154,8 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <input type="hidden" {...register("fair_id")} />
+      <input type="hidden" {...register("booth_type")} />
+      <input type="hidden" {...register("pricing_tier")} />
 
       {/* Stepper */}
       <ol className="flex flex-wrap items-center gap-3 text-sm">
@@ -192,80 +220,53 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
             />
           </div>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-navy">
-              Booth Type <span className="text-gold-500">*</span>
-            </legend>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="cursor-pointer rounded-md border border-navy/15 bg-white p-4 transition-colors has-[input:checked]:border-navy has-[input:checked]:bg-navy/[0.03]">
-                <div className="flex items-start justify-between">
-                  <span className="font-medium text-navy">Standard</span>
-                  <input
-                    type="radio"
-                    value="Standard"
-                    className="accent-navy"
-                    {...register("booth_type")}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-navy/60">
-                  Table, signage, and listing in fair directory
-                </p>
-                <p className="mt-2 text-sm font-semibold text-navy">
-                  {formatUSD(pricing.priceUSD)}
-                  {pricing.isEarlyBird && (
-                    <span className="ml-2 text-xs font-medium uppercase tracking-wide text-green-600">
-                      Early Bird
-                    </span>
-                  )}
-                </p>
-              </label>
-              <label className="cursor-pointer rounded-md border border-navy/15 bg-white p-4 transition-colors has-[input:checked]:border-navy has-[input:checked]:bg-navy/[0.03]">
-                <div className="flex items-start justify-between">
-                  <span className="font-medium text-navy">Premium</span>
-                  <input
-                    type="radio"
-                    value="Premium"
-                    className="accent-navy"
-                    {...register("booth_type")}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-navy/60">
-                  Larger booth, branded backdrop, premium directory placement
-                </p>
-                <p className="mt-2 text-sm font-semibold text-navy">
-                  {formatUSD(pricing.priceUSD)}
-                  <span className="ml-1 text-xs font-normal text-navy/60">
-                    (contact us for upgrade pricing)
-                  </span>
-                </p>
-              </label>
-            </div>
-            {errors.booth_type?.message && (
-              <p className="mt-1.5 text-xs text-red-600">
-                {errors.booth_type.message}
-              </p>
-            )}
-          </fieldset>
-
-          <BoothConfigurator
-            basePriceUSD={pricing.priceUSD}
-            priceExtraTableUSD={extraTableUSD}
-            priceExtraRepUSD={extraRepUSD}
-            maxTables={maxTables}
-            totalTables={totalTables}
-            totalReps={totalReps}
-            onChange={({ totalTables: t, totalReps: r }) => {
-              setValue("total_tables", t, { shouldValidate: true });
-              setValue("total_reps", r, { shouldValidate: true });
-              // Keep the legacy field in sync with reps so older queries
-              // (e.g. CSV exports) still surface the right rep count.
-              setValue("number_of_reps", r);
-            }}
+          <PricingCards
+            fair={fair}
+            selectedTier={selectedTier}
+            onSelect={selectTier}
           />
-          {errors.total_reps?.message && (
-            <p className="-mt-3 text-xs text-red-600">
-              {errors.total_reps.message}
+          {errors.booth_type?.message && (
+            <p className="mt-1.5 text-xs text-red-600">
+              {errors.booth_type.message}
             </p>
+          )}
+
+          {isPremium ? (
+            <div className="rounded-xl border border-navy/10 bg-cream/40 p-6">
+              <p className="font-serif text-lg font-semibold text-navy">
+                Premium booth — fixed package
+              </p>
+              <p className="mt-1 text-sm text-navy/70">
+                2 tables · 4 representatives · flat{" "}
+                <strong>{formatUSD(fair.price_premium_usd ?? 2500)}</strong>.
+                Everything is included — no add-ons to configure.
+              </p>
+            </div>
+          ) : (
+            <>
+              <BoothConfigurator
+                basePriceUSD={pricing.priceUSD}
+                priceExtraTableUSD={extraTableUSD}
+                priceExtraRepUSD={extraRepUSD}
+                maxTables={maxTables}
+                totalTables={totalTables}
+                totalReps={totalReps}
+                fairId={fair.id}
+                maxAddonTablesPerReg={fair.max_addon_tables_per_reg ?? 1}
+                onChange={({ totalTables: t, totalReps: r }) => {
+                  setValue("total_tables", t, { shouldValidate: true });
+                  setValue("total_reps", r, { shouldValidate: true });
+                  // Keep the legacy field in sync with reps so older
+                  // queries (e.g. CSV exports) surface the right count.
+                  setValue("number_of_reps", r);
+                }}
+              />
+              {errors.total_reps?.message && (
+                <p className="-mt-3 text-xs text-red-600">
+                  {errors.total_reps.message}
+                </p>
+              )}
+            </>
           )}
 
           <div className="flex items-center justify-end pt-2">

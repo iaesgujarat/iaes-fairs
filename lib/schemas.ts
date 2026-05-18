@@ -15,6 +15,12 @@ export const step1Schema = z
     booth_type: z.enum(["Standard", "Premium"], {
       message: "Please pick a booth type.",
     }),
+    // v14 — client signals the chosen tier. Server trusts only
+    // "PREMIUM" to switch to the premium path; STANDARD/EARLYBIRD is
+    // always (re)computed server-side from the live fair pricing.
+    pricing_tier: z
+      .enum(["EARLYBIRD", "STANDARD", "PREMIUM"])
+      .optional(),
     // Legacy mirror — kept in sync with total_reps server-side.
     number_of_reps: z
       .number({ message: "Reps must be a number." })

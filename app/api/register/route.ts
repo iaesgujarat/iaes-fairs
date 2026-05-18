@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InvoiceEmail } from "@/emails/InvoiceEmail";
 import { ProformaEmail } from "@/emails/ProformaEmail";
+import { PremiumConfirmationEmail } from "@/emails/PremiumConfirmationEmail";
 import { buildInvoiceFields, generateProformaReference } from "@/lib/invoice";
 import { getLiveForexRate } from "@/lib/forex";
 import { getFairPricing } from "@/lib/pricing";
@@ -15,7 +16,7 @@ import {
 } from "@/lib/booth";
 import { registrationSchema, TERMS_VERSION } from "@/lib/schemas";
 import { formatFairDateRange } from "@/lib/mailerHelpers";
-import type { Fair } from "@/types";
+import type { Fair, PricingTier } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -55,10 +56,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (fairErr || !fair) {
-    return NextResponse.json(
-      { error: "Fair not found." },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Fair not found." }, { status: 404 });
   }
   const f = fair as Fair;
 
@@ -69,24 +67,121 @@ export async function POST(req: Request) {
     );
   }
 
-  // Lock pricing tier + booth fee at registration time
-  const pricing = getFairPricing(f);
-  const boothCheck = validateBoothConfig(
-    { totalTables: input.total_tables, totalReps: input.total_reps },
-    f.max_tables_per_university ?? FALLBACK_MAX_TABLES
-  );
-  if (!boothCheck.valid) {
-    return NextResponse.json(
-      { error: boothCheck.error || "Invalid booth configuration." },
-      { status: 400 }
+  // --------------------------------------------------------------
+  // Lock the tier + booth fee server-side. The client is NEVER
+  // trusted for amounts; "PREMIUM" only switches the path.
+  // --------------------------------------------------------------
+  let tier: PricingTier;
+  let totalTables: number;
+  let totalReps: number;
+  let boothTotalUSD: number;
+  let addonTables = 0;
+  let addonReps = 0;
+  let addonTablesCostUSD = 0;
+  let addonRepsCostUSD = 0;
+  let addonTotalCostUSD = 0;
+  let boothTypeValue: "Standard" | "Premium";
+  let tierLabel: "Early Bird" | "Standard" | "Premium";
+
+  const isPremium = input.pricing_tier === "PREMIUM";
+
+  if (isPremium) {
+    const premiumUSD = f.price_premium_usd;
+    if (!premiumUSD) {
+      return NextResponse.json(
+        { error: "Premium booth is not available for this fair." },
+        { status: 400 }
+      );
+    }
+    // Deadline (start-of-day compare, mirrors getActivePricingState)
+    if (f.premium_deadline) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dl = new Date(f.premium_deadline);
+      dl.setHours(0, 0, 0, 0);
+      if (today.getTime() > dl.getTime()) {
+        return NextResponse.json(
+          { error: "Premium registration deadline has passed." },
+          { status: 400 }
+        );
+      }
+    }
+    // Atomic slot check against the live view
+    const { data: slot } = await supabase
+      .from("premium_slot_status")
+      .select("slots_remaining")
+      .eq("fair_id", f.id)
+      .maybeSingle();
+    if (!slot || (slot.slots_remaining ?? 0) <= 0) {
+      return NextResponse.json(
+        { error: "Premium booth is sold out. Please choose Standard." },
+        { status: 400 }
+      );
+    }
+
+    tier = "PREMIUM";
+    totalTables = 2;
+    totalReps = 4;
+    boothTotalUSD = Number(premiumUSD);
+    boothTypeValue = "Premium";
+    tierLabel = "Premium";
+  } else {
+    const pricing = getFairPricing(f);
+    const maxTbl = f.max_tables_per_university ?? FALLBACK_MAX_TABLES;
+    const boothCheck = validateBoothConfig(
+      { totalTables: input.total_tables, totalReps: input.total_reps },
+      maxTbl
     );
+    if (!boothCheck.valid) {
+      return NextResponse.json(
+        { error: boothCheck.error || "Invalid booth configuration." },
+        { status: 400 }
+      );
+    }
+
+    // Add-on table pool: cap per-reg + shared pool availability.
+    const requestedAddonTables = Math.max(0, input.total_tables - 1);
+    const maxAddon = f.max_addon_tables_per_reg ?? 1;
+    if (requestedAddonTables > maxAddon) {
+      return NextResponse.json(
+        { error: `Maximum ${maxAddon} extra table(s) allowed.` },
+        { status: 400 }
+      );
+    }
+    if (requestedAddonTables > 0) {
+      const { data: poolRow } = await supabase
+        .from("addon_table_status")
+        .select("tables_remaining")
+        .eq("fair_id", f.id)
+        .maybeSingle();
+      const remaining = poolRow?.tables_remaining ?? null;
+      if (remaining != null && remaining < requestedAddonTables) {
+        return NextResponse.json(
+          { error: "Extra table slots are fully booked for this fair." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const booth = calculateBoothPricing(
+      { totalTables: input.total_tables, totalReps: input.total_reps },
+      pricing.priceUSD,
+      f.price_extra_table_usd ?? FALLBACK_EXTRA_TABLE_USD,
+      f.price_extra_rep_usd ?? FALLBACK_EXTRA_REP_USD
+    );
+
+    tier = pricing.tier;
+    totalTables = input.total_tables;
+    totalReps = input.total_reps;
+    boothTotalUSD = booth.grandTotalUSD;
+    addonTables = booth.addonTables;
+    addonReps = booth.addonReps;
+    addonTablesCostUSD = booth.addonTablesCostUSD;
+    addonRepsCostUSD = booth.addonRepsCostUSD;
+    addonTotalCostUSD = booth.addonTotalCostUSD;
+    boothTypeValue = "Standard";
+    tierLabel = pricing.tier === "EARLYBIRD" ? "Early Bird" : "Standard";
   }
-  const booth = calculateBoothPricing(
-    { totalTables: input.total_tables, totalReps: input.total_reps },
-    pricing.priceUSD,
-    f.price_extra_table_usd ?? FALLBACK_EXTRA_TABLE_USD,
-    f.price_extra_rep_usd ?? FALLBACK_EXTRA_REP_USD
-  );
 
   // Gateway state decides everything downstream
   const gatewayActive = !!f.payment_gateway_active;
@@ -104,15 +199,15 @@ export async function POST(req: Request) {
       contact_title: input.contact_title || null,
       contact_email: input.contact_email,
       contact_phone: input.contact_phone || null,
-      booth_type: input.booth_type,
-      number_of_reps: input.total_reps,
-      total_tables: input.total_tables,
-      total_reps: input.total_reps,
-      addon_tables: booth.addonTables,
-      addon_reps: booth.addonReps,
-      addon_cost_usd: booth.addonTotalCostUSD,
+      booth_type: boothTypeValue,
+      number_of_reps: totalReps,
+      total_tables: totalTables,
+      total_reps: totalReps,
+      addon_tables: addonTables,
+      addon_reps: addonReps,
+      addon_cost_usd: addonTotalCostUSD,
       payment_currency: input.payment_currency,
-      pricing_tier: pricing.tier,
+      pricing_tier: tier,
       special_requests: input.special_requests || null,
       status: registrationStatus,
       terms_accepted: true,
@@ -161,9 +256,6 @@ export async function POST(req: Request) {
 
   // ============================================================
   // GATEWAY OFF — Proforma path
-  //
-  // No invoice_number consumed. GST = 0. Indicative INR shown
-  // (final amount + GST get locked at payment time per v8 §9).
   // ============================================================
   if (!gatewayActive) {
     let indicativeForex: { rate: number; date: string } | null = null;
@@ -171,7 +263,7 @@ export async function POST(req: Request) {
       indicativeForex = await getLiveForexRate();
     }
     const indicativeINR = indicativeForex
-      ? Number((booth.grandTotalUSD * indicativeForex.rate).toFixed(2))
+      ? Number((boothTotalUSD * indicativeForex.rate).toFixed(2))
       : null;
 
     const proformaRef = generateProformaReference();
@@ -186,7 +278,7 @@ export async function POST(req: Request) {
         payment_currency: input.payment_currency,
         forex_rate_used: indicativeForex?.rate ?? null,
         forex_rate_date: indicativeForex?.date ?? null,
-        base_amount_usd: booth.grandTotalUSD,
+        base_amount_usd: boothTotalUSD,
         base_amount_inr: indicativeINR,
         gst_type: "NONE",
         cgst_percent: 0,
@@ -195,7 +287,7 @@ export async function POST(req: Request) {
         sgst_amount: 0,
         igst_percent: 0,
         igst_amount: 0,
-        total_amount_usd: booth.grandTotalUSD,
+        total_amount_usd: boothTotalUSD,
         total_amount_inr: indicativeINR,
         due_date: f.registration_deadline,
         status: "unpaid",
@@ -210,37 +302,52 @@ export async function POST(req: Request) {
       );
     }
 
-    // Send ProformaEmail — no payment button, no GST
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = getResend();
-        await resend.emails.send({
-          from: FROM_EMAIL,
-          to: input.contact_email,
-          subject: `You're registered — ${f.name} (${proformaRef})`,
-          react: ProformaEmail({
-            contactName: input.contact_name,
-            universityName: input.university_name,
-            fairName: f.name,
-            fairDateRange: formatFairDateRange(f),
-            proformaReference: proformaRef,
-            paymentCurrency: input.payment_currency,
-            baseAmountUSD: booth.grandTotalUSD,
-            indicativeINR,
-            forexRate: indicativeForex?.rate ?? null,
-            forexDate: indicativeForex?.date ?? null,
-            addonTables: booth.addonTables,
-            addonReps: booth.addonReps,
-            addonTablesCostUSD: booth.addonTablesCostUSD,
-            addonRepsCostUSD: booth.addonRepsCostUSD,
-            tierLabel:
-              pricing.tier === "EARLYBIRD" ? "Early Bird" : "Standard",
-            totalUSD: booth.grandTotalUSD,
-          }),
-        });
+        if (isPremium) {
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: input.contact_email,
+            subject: `💎 Premium Booth Reserved — ${f.name} (${proformaRef})`,
+            react: PremiumConfirmationEmail({
+              contactName: input.contact_name,
+              universityName: input.university_name,
+              fairName: f.name,
+              fairDateRange: formatFairDateRange(f),
+              proformaReference: proformaRef,
+              amountUSD: boothTotalUSD,
+              premiumDeadline: f.premium_deadline ?? null,
+            }),
+          });
+        } else {
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: input.contact_email,
+            subject: `You're registered — ${f.name} (${proformaRef})`,
+            react: ProformaEmail({
+              contactName: input.contact_name,
+              universityName: input.university_name,
+              fairName: f.name,
+              fairDateRange: formatFairDateRange(f),
+              proformaReference: proformaRef,
+              paymentCurrency: input.payment_currency,
+              baseAmountUSD: boothTotalUSD,
+              indicativeINR,
+              forexRate: indicativeForex?.rate ?? null,
+              forexDate: indicativeForex?.date ?? null,
+              addonTables,
+              addonReps,
+              addonTablesCostUSD,
+              addonRepsCostUSD,
+              tierLabel: tierLabel === "Premium" ? "Standard" : tierLabel,
+              totalUSD: boothTotalUSD,
+            }),
+          });
+        }
       }
     } catch (e) {
-      console.error("Proforma email failed:", e);
+      console.error("Confirmation email failed:", e);
     }
 
     return NextResponse.json({
@@ -251,14 +358,11 @@ export async function POST(req: Request) {
   }
 
   // ============================================================
-  // GATEWAY ON — TAX invoice path (legacy v2 flow)
-  //
-  // Forex + GST + invoice_number all happen here. Razorpay
-  // payment captures, webhook flips statuses only.
+  // GATEWAY ON — TAX invoice path
   // ============================================================
   const { row: invoiceRow } = await buildInvoiceFields({
     paymentCurrency: input.payment_currency,
-    boothPriceUSD: booth.grandTotalUSD,
+    boothPriceUSD: boothTotalUSD,
     payerState,
     isGSTRegistered: !!input.is_gst_registered,
   });

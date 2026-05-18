@@ -72,3 +72,48 @@ function startOfDay(d: Date): Date {
   x.setHours(0, 0, 0, 0);
   return x;
 }
+
+// ---------------------------------------------------------------------------
+// v14 — three-tier (Early Bird / Standard / Premium) card state.
+// Additive: does NOT replace getFairPricing (still the source of truth for
+// the locked Standard/Early-Bird booth fee + landing strikethrough).
+// ---------------------------------------------------------------------------
+
+export interface ActivePricingState {
+  earlyBirdActive: boolean;
+  standardActive: boolean;
+  premiumActive: boolean;
+  showEarlyBird: boolean;
+  showStandard: boolean;
+  showPremium: boolean;
+  /** During the early-bird window the Standard card is shown but locked. */
+  standardIsPassive: boolean;
+}
+
+export function getActivePricingState(
+  fair: Pick<
+    Fair,
+    "earlybird_deadline" | "premium_deadline" | "registration_deadline"
+  > & { price_earlybird_usd?: number | null; price_premium_usd?: number | null },
+  now: Date = new Date()
+): ActivePricingState {
+  const today = startOfDay(now).getTime();
+  const onOrBefore = (d: string | null | undefined) =>
+    !!d && today <= startOfDay(new Date(d)).getTime();
+
+  const earlyBirdActive =
+    !!fair.price_earlybird_usd && onOrBefore(fair.earlybird_deadline);
+  const standardActive = onOrBefore(fair.registration_deadline);
+  const premiumActive =
+    !!fair.price_premium_usd && onOrBefore(fair.premium_deadline);
+
+  return {
+    earlyBirdActive,
+    standardActive,
+    premiumActive,
+    showEarlyBird: earlyBirdActive,
+    showStandard: standardActive,
+    showPremium: premiumActive,
+    standardIsPassive: earlyBirdActive,
+  };
+}
