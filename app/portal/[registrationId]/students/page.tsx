@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PortalStudents } from "@/components/PortalStudents";
+import { PortalGate } from "@/components/PortalGate";
+import { hasPortalAccess } from "@/lib/portalAccess";
 import { formatDateLong } from "@/lib/mailerHelpers";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +105,25 @@ export default async function PortalStudentsPage({
           >
             &larr; Back to home
           </Link>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
+  // Access gate — admin session bypasses; otherwise require the
+  // last-4-phone challenge (signed cookie). Shown only when not
+  // expired, so a stale link still gets the clearer expiry message.
+  if (!(await hasPortalAccess(params.registrationId))) {
+    return (
+      <>
+        <SiteHeader variant="light" />
+        <main className="mx-auto max-w-5xl px-6 py-16">
+          <PortalGate
+            registrationId={r.id}
+            universityName={r.university_name}
+            fairName={fair.name}
+          />
         </main>
         <SiteFooter />
       </>

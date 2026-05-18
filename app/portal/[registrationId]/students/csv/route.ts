@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasPortalAccess } from "@/lib/portalAccess";
 
 export const runtime = "nodejs";
 
@@ -86,6 +87,14 @@ export async function GET(
     return NextResponse.json(
       { error: "Portal access has expired." },
       { status: 410 }
+    );
+  }
+
+  // Same gate as the portal page — the CSV must not bypass it.
+  if (!(await hasPortalAccess(params.registrationId))) {
+    return NextResponse.json(
+      { error: "Locked. Open the portal page and enter the access code." },
+      { status: 401 }
     );
   }
 
