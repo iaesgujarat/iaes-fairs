@@ -101,7 +101,7 @@ export function GatewayOpenEmail({
       </p>
 
       <p style={{ marginTop: 20, lineHeight: 1.6 }}>
-        Questions? eduadviser@iaesgujarat.org · +91 98255 93262
+        Questions? eduadviser@iaesgujarat.org · +91 97264 80899
       </p>
       <p style={{ marginTop: 16, lineHeight: 1.6 }}>
         <strong>IAES Team</strong>

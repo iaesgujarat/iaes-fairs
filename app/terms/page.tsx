@@ -528,7 +528,7 @@ export default function TermsPage() {
                 <br />
                 GSTIN: 24AAATI2674J1ZM · PAN: AAATI2674J
                 <br />
-                eduadviser@iaesgujarat.org · +91 98255 93262
+                eduadviser@iaesgujarat.org · +91 97264 80899
               </p>
               <Link
                 href="/"

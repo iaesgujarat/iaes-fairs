@@ -205,7 +205,7 @@ export function ProformaEmail({
       </p>
 
       <p style={{ marginTop: 20, lineHeight: 1.6 }}>
-        For queries: eduadviser@iaesgujarat.org · +91 98255 93262
+        For queries: eduadviser@iaesgujarat.org · +91 97264 80899
       </p>
 
       <p style={{ marginTop: 20, lineHeight: 1.6 }}>

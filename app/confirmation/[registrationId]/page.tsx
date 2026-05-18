@@ -146,7 +146,7 @@ export default async function ConfirmationPage({
                 >
                   eduadviser@iaesgujarat.org
                 </a>{" "}
-                or call +91 98255 93262.
+                or call +91 97264 80899.
               </div>
 
               <Link
@@ -230,7 +230,7 @@ export default async function ConfirmationPage({
               >
                 eduadviser@iaesgujarat.org
               </a>{" "}
-              or call +91 98255 93262.
+              or call +91 97264 80899.
             </div>
 
             <Link

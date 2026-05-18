@@ -36,7 +36,7 @@ const IAES = {
   pan: "AAATI2674J",
   sac: "998596",
   stateCode: "24",
-  phone: "+91 98255 93262",
+  phone: "+91 97264 80899",
   email: "eduadviser@iaesgujarat.org",
 };
 

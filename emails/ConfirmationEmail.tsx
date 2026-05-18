@@ -181,7 +181,7 @@ export function ConfirmationEmail({
                 padding: "16px 24px",
               }}
             >
-              fairs.iaesgujarat.org &middot; +91 98255 93262
+              fairs.iaesgujarat.org &middot; +91 97264 80899
             </td>
           </tr>
         </tbody>

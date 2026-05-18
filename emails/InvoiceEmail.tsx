@@ -210,7 +210,7 @@ export function InvoiceEmail({
                 <br />
                 Indo American Education Society
                 <br />
-                +91 98255 93262
+                +91 97264 80899
               </p>
             </td>
           </tr>

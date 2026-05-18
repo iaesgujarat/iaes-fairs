@@ -135,7 +135,7 @@ export function InstitutionConfirmationEmail({
                 >
                   eduadviser@iaesgujarat.org
                 </a>{" "}
-                &middot; +91 9825593262
+                &middot; +91 9726480899
               </p>
 
               <p style={{ marginTop: 24, lineHeight: 1.6 }}>

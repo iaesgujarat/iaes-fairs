@@ -149,7 +149,7 @@ export function StudentPassEmail({
               </div>
 
               <p style={{ marginTop: 28, fontSize: 12, color: "#9AA4B8" }}>
-                Questions? eduadviser@iaesgujarat.org &middot; +91 98255 93262
+                Questions? eduadviser@iaesgujarat.org &middot; +91 97264 80899
               </p>
               <p style={{ marginTop: 16, fontSize: 12, color: "#0B2B5C" }}>
                 See you at the fair!

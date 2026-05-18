@@ -91,7 +91,7 @@ export function PaymentReminderEmail({
       </p>
 
       <p style={{ marginTop: 22, lineHeight: 1.6 }}>
-        Questions? eduadviser@iaesgujarat.org &middot; +91 98255 93262
+        Questions? eduadviser@iaesgujarat.org &middot; +91 97264 80899
       </p>
       <p style={{ marginTop: 12, lineHeight: 1.6 }}>
         <strong>IAES Team</strong>

@@ -294,8 +294,8 @@ export function FairCTASection({ fair }: { fair: Fair }) {
             eduadviser@iaesgujarat.org
           </a>{" "}
           or call{" "}
-          <a href="tel:+919825593262" className="font-medium text-navy">
-            +91 98255 93262
+          <a href="tel:+919726480899" className="font-medium text-navy">
+            +91 97264 80899
           </a>
         </p>
       </div>

@@ -72,7 +72,7 @@ export function FairCancellationEmail({
         >
           eduadviser@iaesgujarat.org
         </a>{" "}
-        or +91 98255 93262.
+        or +91 97264 80899.
       </p>
 
       <p style={{ marginTop: 22, lineHeight: 1.6 }}>

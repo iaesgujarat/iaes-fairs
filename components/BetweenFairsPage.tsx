@@ -166,10 +166,10 @@ export function BetweenFairsPage({
             </a>
             {" · "}
             <a
-              href="tel:+919825593262"
+              href="tel:+919726480899"
               className="font-semibold text-gold hover:underline"
             >
-              +91 9825593262
+              +91 9726480899
             </a>
           </p>
         </div>

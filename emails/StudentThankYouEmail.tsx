@@ -165,7 +165,7 @@ export function StudentThankYouEmail({
                 >
                   educationfair@iaesgujarat.org
                 </a>{" "}
-                &middot; +91 9825593262
+                &middot; +91 9726480899
               </p>
             </td>
           </tr>

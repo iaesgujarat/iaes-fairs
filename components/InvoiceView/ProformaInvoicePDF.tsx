@@ -27,7 +27,7 @@ const IAES = {
   gstin: "24AAATI2674J1ZM",
   pan: "AAATI2674J",
   sac: "998596",
-  phone: "+91 98255 93262",
+  phone: "+91 97264 80899",
   email: "eduadviser@iaesgujarat.org",
 };
 

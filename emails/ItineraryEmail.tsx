@@ -104,7 +104,7 @@ export function ItineraryEmail({
           color: "#3A5A94",
         }}
       >
-        For day-of help: <strong>+91 98255 93262</strong> ·
+        For day-of help: <strong>+91 97264 80899</strong> ·
         eduadviser@iaesgujarat.org
       </p>
 
