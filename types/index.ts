@@ -59,6 +59,36 @@ export interface Fair {
   cancellation_reason?: string | null;
   postfair_data_sent_at?: string | null;
   itinerary_sent_at?: string | null;
+
+  // ---- v11 itinerary (populated when fetched alongside the fair) ----
+  itinerary?: FairItineraryStop[];
+}
+
+export type ItineraryEventType =
+  | "CAMPUS_VISIT"
+  | "OPEN_FAIR"
+  | "TRAVEL"
+  | "FREE";
+
+export interface FairItineraryStop {
+  id: string;
+  fair_id: string;
+  day_number: number;
+  event_date: string; // ISO date
+  event_type: ItineraryEventType;
+  institution_name: string | null;
+  venue_name: string | null;
+  city: string;
+  address: string | null;
+  start_time: string | null; // "10:00"
+  end_time: string | null; // "13:00"
+  is_main_fair: boolean;
+  is_confirmed: boolean;
+  is_public: boolean;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FairStatusLog {

@@ -9,6 +9,8 @@ import {
   isRegistrationOpen,
   isStudentPassOpen,
 } from "@/lib/fairStatus";
+import { fetchPublicItinerary } from "@/lib/itinerary";
+import { FairItinerary } from "@/components/FairItinerary";
 import type { Fair } from "@/types";
 
 export const revalidate = 60;
@@ -24,7 +26,9 @@ async function getCurrentFair(): Promise<Fair | null> {
       .order("fair_date", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return (data as Fair) ?? null;
+    if (!data) return null;
+    const itinerary = await fetchPublicItinerary(supabase, data.id);
+    return { ...(data as Fair), itinerary };
   } catch {
     return null;
   }
@@ -57,6 +61,68 @@ const FALLBACK_FAIR: Fair = {
   is_active: true,
   status: "PUBLISHED",
   created_at: new Date().toISOString(),
+  itinerary: [
+    {
+      id: "preview-1",
+      fair_id: "preview",
+      day_number: 1,
+      event_date: "2026-08-06",
+      event_type: "CAMPUS_VISIT",
+      institution_name: "IIT Gandhinagar",
+      venue_name: "Academic Block",
+      city: "Gandhinagar",
+      address: null,
+      start_time: "10:00",
+      end_time: "13:00",
+      is_main_fair: false,
+      is_confirmed: true,
+      is_public: true,
+      notes: "Lunch provided by IAES.",
+      sort_order: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: "preview-2",
+      fair_id: "preview",
+      day_number: 2,
+      event_date: "2026-08-07",
+      event_type: "CAMPUS_VISIT",
+      institution_name: "Nirma University",
+      venue_name: "Conference Centre",
+      city: "Ahmedabad",
+      address: null,
+      start_time: "10:00",
+      end_time: "13:00",
+      is_main_fair: false,
+      is_confirmed: false,
+      is_public: true,
+      notes: null,
+      sort_order: 2,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: "preview-3",
+      fair_id: "preview",
+      day_number: 3,
+      event_date: "2026-08-08",
+      event_type: "OPEN_FAIR",
+      institution_name: null,
+      venue_name: "Hotel Courtyard by Marriott",
+      city: "Ahmedabad",
+      address: null,
+      start_time: "18:00",
+      end_time: "21:00",
+      is_main_fair: true,
+      is_confirmed: true,
+      is_public: true,
+      notes: "Smart/formal dress recommended.",
+      sort_order: 3,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ],
 };
 
 function formatDate(dateStr: string): string {
@@ -118,6 +184,16 @@ function FairLanding({ fair }: { fair: Fair }) {
 
         <FairHero fair={fair} />
         <FairDetails fair={fair} />
+
+        {fair.itinerary && fair.itinerary.length > 0 && (
+          <section className="mx-auto max-w-5xl px-6 py-14">
+            <FairItinerary
+              stops={fair.itinerary}
+              arriveBy={fair.arrive_by}
+              departAfter={fair.depart_after}
+            />
+          </section>
+        )}
 
         {/* Registration CTAs (status-gated) */}
         <section id="register" className="bg-[#F5F7FA] py-16 scroll-mt-20">

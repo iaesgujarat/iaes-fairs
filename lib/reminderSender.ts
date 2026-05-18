@@ -10,6 +10,11 @@ import {
   formatDateLong,
   TEST_RECIPIENT,
 } from "@/lib/mailerHelpers";
+import {
+  fetchPublicItinerary,
+  ITINERARY_EVENT_LABELS,
+  itineraryTimeRange,
+} from "@/lib/itinerary";
 import type {
   Fair,
   AnnouncementRecipient,
@@ -275,34 +280,59 @@ async function runRegistrationsReminder(opts: {
 
   const list = (regs as RegRow[] | null) || [];
 
-  const itinerary = [
-    {
-      date: fair.arrive_by
-        ? formatDateLong(fair.arrive_by)
-        : formatDateLong(fair.fair_date_start),
-      details: "Arrive in Ahmedabad. Briefing at hotel.",
-    },
-    {
-      date: formatDateLong(fair.fair_date_start),
-      details: "Institutional visits — exact venues confirmed 1 week prior.",
-    },
-    ...(fair.fair_date_end && fair.fair_date_end !== fair.fair_date_start
-      ? [
+  // Source the itinerary from the fair_itinerary table (v11). Falls back
+  // to the generic block if no stops are built yet (or pre-migration).
+  const itineraryStops = await fetchPublicItinerary(supabase, fair.id);
+  const itinerary =
+    itineraryStops.length > 0
+      ? itineraryStops.map((s) => {
+          const venue =
+            s.institution_name && s.venue_name
+              ? `${s.institution_name}, ${s.venue_name}`
+              : s.institution_name ?? s.venue_name ?? "";
+          const time = itineraryTimeRange(s);
+          return {
+            date: formatDateLong(s.event_date),
+            details:
+              ITINERARY_EVENT_LABELS[s.event_type] +
+              (venue ? ` — ${venue}` : "") +
+              (s.city ? `, ${s.city}` : "") +
+              (time ? ` · ${time}` : "") +
+              (s.is_main_fair ? " · ★ Main Fair" : "") +
+              (!s.is_confirmed ? " (TBC)" : "") +
+              (s.notes ? ` — ${s.notes}` : ""),
+          };
+        })
+      : [
           {
-            date: formatDateLong(fair.fair_date_end),
-            details: "Open Fair at Ahmedabad venue (final day).",
+            date: fair.arrive_by
+              ? formatDateLong(fair.arrive_by)
+              : formatDateLong(fair.fair_date_start),
+            details: "Arrive in Ahmedabad. Briefing at hotel.",
           },
-        ]
-      : []),
-    ...(fair.depart_after
-      ? [
           {
-            date: formatDateLong(fair.depart_after),
-            details: "Depart from Ahmedabad.",
+            date: formatDateLong(fair.fair_date_start),
+            details:
+              "Institutional visits — exact venues confirmed 1 week prior.",
           },
-        ]
-      : []),
-  ];
+          ...(fair.fair_date_end &&
+          fair.fair_date_end !== fair.fair_date_start
+            ? [
+                {
+                  date: formatDateLong(fair.fair_date_end),
+                  details: "Open Fair at Ahmedabad venue (final day).",
+                },
+              ]
+            : []),
+          ...(fair.depart_after
+            ? [
+                {
+                  date: formatDateLong(fair.depart_after),
+                  details: "Depart from Ahmedabad.",
+                },
+              ]
+            : []),
+        ];
 
   function render(reg: RegRow) {
     const inv = Array.isArray(reg.invoice) ? reg.invoice[0] : reg.invoice;

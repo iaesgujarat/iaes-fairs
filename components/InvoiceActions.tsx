@@ -6,7 +6,13 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { InvoicePDF } from "@/components/InvoicePDF";
 import { ProformaInvoicePDF } from "@/components/InvoiceView/ProformaInvoicePDF";
-import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
+import type {
+  Registration,
+  Invoice,
+  Fair,
+  BillingDetails,
+  FairItineraryStop,
+} from "@/types";
 
 const PDFDownloadLink = dynamic(
   () => import("@react-pdf/renderer").then((m) => m.PDFDownloadLink),
@@ -25,6 +31,7 @@ interface Props {
   invoice: Invoice;
   fair: Fair;
   billing: BillingDetails | null;
+  itinerary?: FairItineraryStop[];
   showPayButton?: boolean;
 }
 
@@ -33,6 +40,7 @@ export function InvoiceActions({
   invoice,
   fair,
   billing,
+  itinerary = [],
   showPayButton = true,
 }: Props) {
   const isPaid =
@@ -54,6 +62,7 @@ export function InvoiceActions({
               registration={registration}
               invoice={invoice}
               fair={fair}
+              itinerary={itinerary}
             />
           ) : (
             <InvoicePDF
@@ -61,6 +70,7 @@ export function InvoiceActions({
               invoice={invoice}
               fair={fair}
               billing={billing}
+              itinerary={itinerary}
             />
           )
         }

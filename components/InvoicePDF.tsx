@@ -10,14 +10,22 @@ import {
 } from "@react-pdf/renderer";
 import { rupeesToWords } from "@/lib/invoice";
 import { IAES_LOGO_PATH } from "@/lib/brand";
-import type { Invoice, Registration, Fair, BillingDetails } from "@/types";
+import type {
+  Invoice,
+  Registration,
+  Fair,
+  BillingDetails,
+  FairItineraryStop,
+} from "@/types";
 import { BankDetailsPDF } from "./InvoiceView/BankDetailsPDF";
+import { ItineraryBlockPDF } from "./InvoiceView/ItineraryBlockPDF";
 
 interface Props {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
   billing: BillingDetails | null;
+  itinerary?: FairItineraryStop[];
 }
 
 const IAES = {
@@ -260,19 +268,27 @@ function TermsSummary({ registration }: { registration: Registration }) {
   );
 }
 
-export function InvoicePDF({ registration, invoice, fair, billing }: Props) {
+export function InvoicePDF({
+  registration,
+  invoice,
+  fair,
+  billing,
+  itinerary = [],
+}: Props) {
   return invoice.payment_currency === "INR" ? (
     <InvoicePDFInr
       registration={registration}
       invoice={invoice}
       fair={fair}
       billing={billing}
+      itinerary={itinerary}
     />
   ) : (
     <InvoicePDFUsd
       registration={registration}
       invoice={invoice}
       fair={fair}
+      itinerary={itinerary}
     />
   );
 }
@@ -281,10 +297,12 @@ function InvoicePDFUsd({
   registration,
   invoice,
   fair,
+  itinerary = [],
 }: {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
+  itinerary?: FairItineraryStop[];
 }) {
   return (
     <Document
@@ -407,6 +425,12 @@ function InvoicePDFUsd({
           </View>
         </View>
 
+        <ItineraryBlockPDF
+          stops={itinerary}
+          arriveBy={fair.arrive_by}
+          departAfter={fair.depart_after}
+        />
+
         <BankDetailsPDF />
 
         <TermsSummary registration={registration} />
@@ -427,11 +451,13 @@ function InvoicePDFInr({
   invoice,
   fair,
   billing,
+  itinerary = [],
 }: {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
   billing: BillingDetails | null;
+  itinerary?: FairItineraryStop[];
 }) {
   return (
     <Document
@@ -638,6 +664,12 @@ function InvoicePDFInr({
         <Text style={styles.words}>
           Amount in words: {rupeesToWords(Number(invoice.total_amount_inr || 0))}
         </Text>
+
+        <ItineraryBlockPDF
+          stops={itinerary}
+          arriveBy={fair.arrive_by}
+          departAfter={fair.depart_after}
+        />
 
         <BankDetailsPDF />
 

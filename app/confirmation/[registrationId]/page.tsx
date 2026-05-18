@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent } from "@/components/ui/Card";
 import { InvoiceActions } from "@/components/InvoiceActions";
 import { formatINR, formatUSD, formatDate } from "@/lib/utils";
+import { fetchPublicItinerary } from "@/lib/itinerary";
 import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ export default async function ConfirmationPage({
   if (!invoice || !fair) notFound();
 
   const registration = data as Registration;
+  const itinerary = await fetchPublicItinerary(supabase, fair.id);
   const isProforma = invoice.invoice_type === "PROFORMA";
   const isINR = invoice.payment_currency === "INR";
 
@@ -131,6 +133,7 @@ export default async function ConfirmationPage({
                   invoice={invoice}
                   fair={fair}
                   billing={billing}
+                  itinerary={itinerary}
                   showPayButton={false}
                 />
               </div>

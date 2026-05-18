@@ -9,6 +9,7 @@ import { InvoiceActions } from "@/components/InvoiceActions";
 import { InvoiceUSD } from "@/components/InvoiceView/InvoiceUSD";
 import { InvoiceINR } from "@/components/InvoiceView/InvoiceINR";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
+import { fetchPublicItinerary } from "@/lib/itinerary";
 import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export default async function InvoicePage({
   if (!invoice || !fair) notFound();
 
   const registration = data as Registration;
+  const itinerary = await fetchPublicItinerary(supabase, fair.id);
   const isINR = invoice.payment_currency === "INR";
   const isProforma = invoice.invoice_type === "PROFORMA";
   const gatewayActive = !!fair.payment_gateway_active;
@@ -113,6 +115,7 @@ export default async function InvoicePage({
               invoice={invoice}
               fair={fair}
               billing={billing}
+              itinerary={itinerary}
               showPayButton={showPayButton}
             />
           </CardFooter>

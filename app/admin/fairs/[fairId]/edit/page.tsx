@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
 import { FairForm } from "@/components/FairForm";
+import { ItineraryBuilder } from "@/components/ItineraryBuilder";
 import { STATUS_LABELS } from "@/lib/fairStatus";
-import type { Fair } from "@/types";
+import type { Fair, FairItineraryStop } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,15 @@ export default async function EditFairPage({
   const f = fair as Fair;
   const status = f.status ?? "DRAFT";
   const editable = status === "DRAFT" || status === "PUBLISHED";
+
+  // Itinerary is operational data — editable in any status (venues get
+  // confirmed right up to fair time). Empty if the table isn't migrated yet.
+  const { data: stopsData } = await supabase
+    .from("fair_itinerary")
+    .select("*")
+    .eq("fair_id", params.fairId)
+    .order("sort_order", { ascending: true });
+  const stops = (stopsData as FairItineraryStop[] | null) ?? [];
 
   return (
     <>
@@ -100,6 +110,20 @@ export default async function EditFairPage({
             <FairForm mode="edit" fair={f} />
           </div>
         )}
+
+        <section id="itinerary" className="mt-12 scroll-mt-20">
+          <h2 className="font-serif text-2xl font-semibold text-navy">
+            Fair Itinerary
+          </h2>
+          <p className="mt-1 text-sm text-navy/60">
+            The single source of truth for tour stops — the landing page,
+            invoices and the briefing email all read from this. Field edits
+            save on blur; toggles and reorder save immediately.
+          </p>
+          <div className="mt-6">
+            <ItineraryBuilder fairId={f.id} initialStops={stops} />
+          </div>
+        </section>
       </main>
 
       <SiteFooter />

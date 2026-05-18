@@ -9,7 +9,12 @@ import { GatewayToggle } from "@/components/GatewayToggle";
 import { formatDateShort, formatINR, formatUSD } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/fairStatus";
 import { getFairPricing } from "@/lib/pricing";
-import type { Fair, FairStatus, FairStatusLog } from "@/types";
+import type {
+  Fair,
+  FairStatus,
+  FairStatusLog,
+  FairItineraryStop,
+} from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +69,7 @@ export default async function FairControlPanel({
     { data: log },
     { data: regs },
     { count: passCount },
+    { data: stopsData },
   ] = await Promise.all([
     supabase.from("fairs").select("*").eq("id", params.fairId).maybeSingle(),
     supabase
@@ -82,7 +88,18 @@ export default async function FairControlPanel({
       .from("fair_student_passes")
       .select("*", { count: "exact", head: true })
       .eq("fair_id", params.fairId),
+    supabase
+      .from("fair_itinerary")
+      .select("*")
+      .eq("fair_id", params.fairId)
+      .order("sort_order", { ascending: true }),
   ]);
+
+  // Empty if the fair_itinerary table isn't migrated yet — never throws.
+  const itineraryStops = (stopsData as FairItineraryStop[] | null) ?? [];
+  const unconfirmedPublic = itineraryStops.filter(
+    (s) => s.is_public && !s.is_confirmed
+  ).length;
 
   if (!fair) notFound();
 
@@ -301,6 +318,79 @@ export default async function FairControlPanel({
               <Check ok={true} /> T&amp;C version 2026.1
             </li>
           </ul>
+        </div>
+
+        {/* Itinerary summary */}
+        <div className="mb-8 rounded-lg border border-navy/10 bg-white p-5 shadow-card">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wider text-navy/55">
+              Itinerary
+            </p>
+            <Link
+              href={`/admin/fairs/${f.id}/edit#itinerary`}
+              className="text-xs font-medium text-navy/70 hover:text-navy"
+            >
+              Edit itinerary →
+            </Link>
+          </div>
+
+          {itineraryStops.length === 0 ? (
+            <p className="mt-3 text-sm text-navy/55">
+              No itinerary stops yet.{" "}
+              <Link
+                href={`/admin/fairs/${f.id}/edit#itinerary`}
+                className="font-medium text-navy underline"
+              >
+                Build the itinerary
+              </Link>{" "}
+              so it appears on the landing page, invoices and the briefing
+              email.
+            </p>
+          ) : (
+            <>
+              <ul className="mt-3 divide-y divide-navy/5 text-sm">
+                {itineraryStops.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
+                  >
+                    <span className="w-28 shrink-0 text-xs text-navy/55">
+                      Day {s.day_number} · {formatDateShort(s.event_date)}
+                    </span>
+                    <span className="flex-1 text-navy/85">
+                      {s.institution_name ?? s.venue_name ?? "—"}
+                      {!s.is_public && (
+                        <span className="ml-2 text-xs text-navy/45">
+                          (hidden)
+                        </span>
+                      )}
+                    </span>
+                    {s.is_main_fair && (
+                      <span className="text-xs font-semibold text-gold-500">
+                        ★ Main
+                      </span>
+                    )}
+                    <span
+                      className={
+                        s.is_confirmed
+                          ? "text-xs font-medium text-emerald-600"
+                          : "text-xs font-medium text-amber-600"
+                      }
+                    >
+                      {s.is_confirmed ? "✅ Confirmed" : "⏳ TBC"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {unconfirmedPublic > 0 && (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  ⚠️ {unconfirmedPublic} public stop
+                  {unconfirmedPublic === 1 ? "" : "s"} still unconfirmed —
+                  update before announcing.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         {/* Payment gateway toggle (Step 2.5) */}

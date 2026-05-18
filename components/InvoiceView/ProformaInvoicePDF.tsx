@@ -8,14 +8,16 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import type { Invoice, Registration, Fair } from "@/types";
+import type { Invoice, Registration, Fair, FairItineraryStop } from "@/types";
 import { BankDetailsPDF } from "./BankDetailsPDF";
+import { ItineraryBlockPDF } from "./ItineraryBlockPDF";
 import { IAES_LOGO_PATH } from "@/lib/brand";
 
 interface Props {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
+  itinerary?: FairItineraryStop[];
 }
 
 const IAES = {
@@ -171,7 +173,12 @@ function fmtDate(d: string): string {
   });
 }
 
-export function ProformaInvoicePDF({ registration, invoice, fair }: Props) {
+export function ProformaInvoicePDF({
+  registration,
+  invoice,
+  fair,
+  itinerary = [],
+}: Props) {
   const baseUSD =
     Number(invoice.base_amount_usd ?? 0) -
     Number(registration.addon_cost_usd || 0);
@@ -324,6 +331,12 @@ export function ProformaInvoicePDF({ registration, invoice, fair }: Props) {
             </Text>
           </View>
         )}
+
+        <ItineraryBlockPDF
+          stops={itinerary}
+          arriveBy={fair.arrive_by}
+          departAfter={fair.depart_after}
+        />
 
         <BankDetailsPDF />
 
