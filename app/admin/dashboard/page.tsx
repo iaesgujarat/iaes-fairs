@@ -13,6 +13,7 @@ import type {
   Fair,
   Payment,
   InstitutionRegistration,
+  WaitlistSignup,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -42,12 +43,27 @@ interface InstRow extends InstitutionRegistration {
   fair: Pick<Fair, "id" | "name" | "fair_date">;
 }
 
-type Tab = "university" | "institution" | "fairday";
+type Tab = "university" | "institution" | "fairday" | "waitlist";
 
 function resolveTab(value?: string): Tab {
   if (value === "institution") return "institution";
   if (value === "fairday") return "fairday";
+  if (value === "waitlist") return "waitlist";
   return "university";
+}
+
+/** Waitlist count — 0 if the table isn't migrated yet (never throws). */
+async function getWaitlistCount(): Promise<number> {
+  try {
+    const supabase = createAdminClient();
+    const { count, error } = await supabase
+      .from("waitlist_signups")
+      .select("*", { count: "exact", head: true });
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export default async function AdminDashboardPage({
@@ -59,6 +75,11 @@ export default async function AdminDashboardPage({
 
   const session = await createClient().auth.getUser();
   const userEmail = session.data.user?.email || "Admin";
+
+  // The Waitlist tab only appears once signups exist (no empty clutter),
+  // but a direct ?tab=waitlist link still resolves so it's never trapped.
+  const waitlistCount = await getWaitlistCount();
+  const showWaitlistTab = waitlistCount > 0 || tab === "waitlist";
 
   return (
     <>
@@ -126,11 +147,20 @@ export default async function AdminDashboardPage({
           <TabLink href="/admin/dashboard?tab=fairday" active={tab === "fairday"}>
             Fair Day
           </TabLink>
+          {showWaitlistTab && (
+            <TabLink
+              href="/admin/dashboard?tab=waitlist"
+              active={tab === "waitlist"}
+            >
+              Waitlist
+            </TabLink>
+          )}
         </div>
 
         {tab === "university" && <UniversityTab />}
         {tab === "institution" && <InstitutionTab />}
         {tab === "fairday" && <FairDayWrapper />}
+        {tab === "waitlist" && <WaitlistTab />}
       </main>
 
       <SiteFooter />
@@ -325,6 +355,99 @@ async function InstitutionTab() {
       </div>
 
       <InstitutionAdminTable rows={rows} />
+    </>
+  );
+}
+
+// ----------------------------------------------------------------
+// Waitlist tab — between-fairs signups (auto-merged to mailing list)
+// ----------------------------------------------------------------
+async function WaitlistTab() {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("waitlist_signups")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const rows = (data as WaitlistSignup[] | null) ?? [];
+
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-navy/15 bg-white p-10 text-center text-sm text-navy/55">
+        No waitlist signups yet. This tab appears when universities sign up
+        between fairs.
+      </div>
+    );
+  }
+
+  const mergedCount = rows.filter((r) => r.merged_to_recipients).length;
+
+  return (
+    <>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-navy/70">
+          <strong>{rows.length}</strong> signup
+          {rows.length === 1 ? "" : "s"} ·{" "}
+          {mergedCount === rows.length ? (
+            <span className="text-emerald-600">
+              all merged to mailing list ✅
+            </span>
+          ) : (
+            <span className="text-amber-600">
+              {mergedCount}/{rows.length} merged to mailing list
+            </span>
+          )}
+        </p>
+        <a
+          href="/api/admin/waitlist?format=csv"
+          className="inline-flex items-center gap-2 rounded-md border border-navy/15 bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-cream"
+        >
+          Download CSV
+        </a>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-navy/10 bg-white shadow-card">
+        <table className="w-full text-sm">
+          <thead className="bg-cream/60 text-xs uppercase tracking-wider text-navy/55">
+            <tr>
+              <th className="px-4 py-2.5 text-left">University</th>
+              <th className="px-4 py-2.5 text-left">Contact</th>
+              <th className="px-4 py-2.5 text-left">Email</th>
+              <th className="px-4 py-2.5 text-left">Country</th>
+              <th className="px-4 py-2.5 text-left">Signed Up</th>
+              <th className="px-4 py-2.5 text-left">Merged</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-navy/5">
+                <td className="px-4 py-2.5 font-medium text-navy">
+                  {r.university_name}
+                </td>
+                <td className="px-4 py-2.5 text-navy/75">
+                  {r.contact_name || "—"}
+                </td>
+                <td className="px-4 py-2.5 text-navy/75">{r.email}</td>
+                <td className="px-4 py-2.5 text-navy/75">{r.country}</td>
+                <td className="px-4 py-2.5 text-xs text-navy/65">
+                  {new Date(r.created_at).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </td>
+                <td className="px-4 py-2.5">
+                  {r.merged_to_recipients ? (
+                    <span className="text-emerald-600">✓</span>
+                  ) : (
+                    <span className="text-amber-500">pending</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

@@ -62,6 +62,22 @@ export interface Fair {
 
   // ---- v11 itinerary (populated when fetched alongside the fair) ----
   itinerary?: FairItineraryStop[];
+
+  // ---- post-fair stats (optional; only populated if a future
+  // migration adds these columns — UI hides the row when absent) ----
+  stat_universities_participated?: number | null;
+  stat_students_attended?: number | null;
+}
+
+export interface WaitlistSignup {
+  id: string;
+  university_name: string;
+  contact_name: string | null;
+  email: string;
+  country: string;
+  source_fair_id: string | null;
+  merged_to_recipients: boolean;
+  created_at: string;
 }
 
 export type ItineraryEventType =
