@@ -11,6 +11,7 @@ import { registrationSchema, type RegistrationInput } from "@/lib/schemas";
 import { calculateGST } from "@/lib/gst";
 import { getFairPricing } from "@/lib/pricing";
 import {
+  calculateBoothPricing,
   FALLBACK_EXTRA_REP_USD,
   FALLBACK_EXTRA_TABLE_USD,
   FALLBACK_MAX_TABLES,
@@ -97,6 +98,19 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
       setValue("number_of_reps", 2);
     }
   }
+
+  // What the registrant will actually be billed (shown on Step 3 /
+  // Payment). Premium = flat premium fee (no add-ons). Otherwise base
+  // + add-ons via the SAME lib/booth function the server uses, so the
+  // displayed amount can never drift from the generated proforma.
+  const effectiveBoothUSD = isPremium
+    ? Number(fair.price_premium_usd ?? 2500)
+    : calculateBoothPricing(
+        { totalTables, totalReps },
+        pricing.priceUSD,
+        extraTableUSD,
+        extraRepUSD
+      ).grandTotalUSD;
 
   async function goNext() {
     let fields: (keyof RegistrationInput)[];
@@ -426,7 +440,7 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
           isGSTRegistered={!!isGSTRegistered}
           setValue={setValue}
           fair={fair}
-          boothPriceUSD={pricing.priceUSD}
+          boothPriceUSD={effectiveBoothUSD}
           submitting={submitting}
           submitError={submitError}
           onBack={() => setStep(1)}
@@ -463,7 +477,8 @@ function Step3Payment({
   isGSTRegistered: boolean;
   setValue: RHFSetValue;
   fair: Fair;
-  /** Tier-aware booth fee in USD (early-bird if active, else standard). */
+  /** Effective amount billed in USD — premium flat fee, or base +
+   *  add-ons (parity with the server / generated proforma). */
   boothPriceUSD: number;
   submitting: boolean;
   submitError: string | null;
