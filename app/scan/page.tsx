@@ -222,6 +222,13 @@ export default function ScanLandingPage() {
             <p className="mt-2 text-xs text-red-300">{manualPassError}</p>
           )}
         </div>
+
+        <Link
+          href={`/portal/${identity.registrationId}/students`}
+          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
+        >
+          📋 View &amp; export my saved list
+        </Link>
       </div>
     </main>
   );

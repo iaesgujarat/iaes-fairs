@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const STORAGE_KEY = "iaes.scan.university";
@@ -87,7 +87,7 @@ export default function ScanProfilePage({
     };
   }, [params.passUuid]);
 
-  async function save() {
+  async function save(opts?: { interestedOverride?: boolean }) {
     if (!identity || !profile) return;
     setSaving(true);
     setSaveError(null);
@@ -99,7 +99,7 @@ export default function ScanProfilePage({
           passUuid: profile.pass_uuid,
           universityRegistrationId: identity.registrationId,
           repNotes: repNotes || undefined,
-          interested,
+          interested: opts?.interestedOverride ?? interested,
         }),
       });
       const body = await res.json();
@@ -258,19 +258,7 @@ export default function ScanProfilePage({
                 rows={2}
                 placeholder="Strong fit for engineering. Follow up about scholarship deadline."
                 className="mt-1 block w-full rounded-md border border-navy/15 bg-white px-3 py-2 text-sm text-navy placeholder:text-navy/40 focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
-                disabled={!!saveState}
               />
-
-              <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-navy">
-                <input
-                  type="checkbox"
-                  checked={interested}
-                  onChange={(e) => setInterested(e.target.checked)}
-                  className="accent-navy"
-                  disabled={!!saveState}
-                />
-                Mark as interested
-              </label>
             </div>
 
             {saveError && (
@@ -279,23 +267,49 @@ export default function ScanProfilePage({
               </div>
             )}
 
-            {saveState ? (
-              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+            {/* Primary action — capture EVERY conversation. Interest is
+                an optional sub-flag below, never a gate on saving. */}
+            <Button
+              onClick={() => save()}
+              variant="gold"
+              size="lg"
+              loading={saving}
+              className="mt-5 w-full"
+            >
+              <Save className="h-4 w-4" />
+              {saveState ? "Save again (update)" : "Save Contact"}
+            </Button>
+            <p className="mt-1.5 text-center text-xs text-navy/55">
+              Tap for every student you speak to.
+            </p>
+
+            {saveState && (
+              <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
                 {saveState.alreadyScanned
-                  ? "✓ Already in your list — notes updated."
+                  ? "✓ In your list — details updated."
                   : `✓ Saved · ${saveState.scannedAt}`}
               </div>
-            ) : (
-              <Button
-                onClick={save}
-                variant="gold"
-                size="lg"
-                loading={saving}
-                className="mt-5 w-full"
-              >
-                <Star className="h-4 w-4" /> Save Contact
-              </Button>
             )}
+
+            <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-md border border-navy/10 bg-cream/40 p-3 text-sm text-navy">
+              <input
+                type="checkbox"
+                checked={interested}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setInterested(v);
+                  if (saveState) save({ interestedOverride: v });
+                }}
+                className="mt-0.5 accent-navy"
+              />
+              <span>
+                <span className="font-medium">Mark as Interested</span>
+                <span className="mt-0.5 block text-xs text-navy/55">
+                  Optional follow-up filter — not required to save. Set it
+                  before or after saving.
+                </span>
+              </span>
+            </label>
           </div>
         )}
       </div>
