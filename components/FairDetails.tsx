@@ -97,10 +97,10 @@ export function FairDetails({ fair }: { fair: Fair }) {
               <span className="text-gold-500">&#10003;</span> Premium booth space &amp; institutional branding
             </li>
             <li className="flex gap-2">
-              <span className="text-gold-500">&#10003;</span> EducationUSA-aligned briefing session
+              <span className="text-gold-500">&#10003;</span> Expert-led briefings on U.S. admissions, scholarships &amp; visas
             </li>
             <li className="flex gap-2">
-              <span className="text-gold-500">&#10003;</span> Government &amp; consulate engagement
+              <span className="text-gold-500">&#10003;</span> Direct engagement with leading Gujarat institutions
             </li>
           </ul>
         </div>
