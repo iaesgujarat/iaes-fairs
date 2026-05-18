@@ -9,7 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 type Phase = "request" | "verify";
 
 /**
- * Admin sign-in via 6-digit email OTP.
+ * Admin sign-in via email OTP (Supabase OTP length is configurable
+ * 6–10; the input accepts the full code as emailed).
  *
  * Primary path: signInWithOtp → email a code → verifyOtp({type:"email"}).
  * verifyOtp needs NO PKCE code-verifier and NO redirect, so it is
@@ -49,7 +50,7 @@ export function AdminLoginForm() {
       if (error) throw error;
       setPhase("verify");
       setNotice(
-        "We emailed a 6-digit code (and a backup sign-in link). Enter the code below — it expires in 1 hour."
+        "We emailed your sign-in code (and a backup link). Enter the code below — it expires in 1 hour."
       );
     } catch (e) {
       setError(
@@ -100,13 +101,15 @@ export function AdminLoginForm() {
           type="text"
           inputMode="numeric"
           autoComplete="one-time-code"
-          maxLength={6}
-          label="6-digit code"
-          placeholder="••••••"
+          maxLength={10}
+          label="Sign-in code"
+          placeholder="••••••••"
           required
           value={code}
           onChange={(e) =>
-            setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+            // Supabase email-OTP length is configurable (6–10). Never
+            // hard-cap at 6 — accept the full code as emailed.
+            setCode(e.target.value.replace(/\D/g, "").slice(0, 10))
           }
           error={error || undefined}
           className="text-center text-2xl tracking-[0.5em]"
