@@ -4,14 +4,45 @@ import { z } from "zod";
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
+// ---- phone: international, format-tolerant, anti-filler -------
+// Reps register from US / India / anywhere — do NOT force an
+// India-specific pattern. Accept +, country code, spaces, (), -, .
+// but reject obvious junk typed just to clear the field.
+const PHONE_ALLOWED = /^[+]?[0-9()\-.\s]{6,40}$/;
+function isPlausiblePhone(v: string): boolean {
+  if (!PHONE_ALLOWED.test(v)) return false;
+  const digits = v.replace(/\D/g, "");
+  // E.164 caps at 15 digits; ~7 is the shortest real national number.
+  if (digits.length < 7 || digits.length > 15) return false;
+  // Filler guards: all-identical (0000000000) or a straight run
+  // (1234567890 / 0123456789 / 9876543210).
+  if (/^(\d)\1+$/.test(digits)) return false;
+  if ("01234567890123456789".includes(digits)) return false;
+  if ("09876543210987654321".includes(digits)) return false;
+  return true;
+}
+
+// ---- university website: accept a bare domain OR a full URL ---
+function websiteHostIsValid(v: string): boolean {
+  const host = v.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+  return /^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(host);
+}
+
 // ---- Step 1: University -------------------------------------
 export const step1Schema = z
   .object({
     university_name: z.string().min(2, "University name is required.").max(200),
     university_country: z.string().min(2).max(80),
     university_website: z
-      .union([z.url("Please enter a valid URL (https://...)."), z.literal("")])
-      .optional(),
+      .string()
+      .trim()
+      .min(1, "University website or domain is required.")
+      .max(255)
+      .refine(
+        websiteHostIsValid,
+        "Enter a valid website or domain (e.g. asu.edu or https://www.asu.edu)."
+      )
+      .transform((v) => (/^https?:\/\//i.test(v) ? v : `https://${v}`)),
     booth_type: z.enum(["Standard", "Premium"], {
       message: "Please pick a booth type.",
     }),
@@ -58,7 +89,15 @@ export const step2Schema = z.object({
   contact_name: z.string().min(2, "Full name is required.").max(120),
   contact_title: z.string().max(120).optional(),
   contact_email: z.email("Please enter a valid email address."),
-  contact_phone: z.string().max(40).optional(),
+  contact_phone: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required.")
+    .max(40)
+    .refine(
+      isPlausiblePhone,
+      "Enter a valid phone number with country code (e.g. +1 562 985 4111)."
+    ),
   special_requests: z.string().max(2000).optional(),
   terms_accepted: z
     .boolean()

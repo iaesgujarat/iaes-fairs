@@ -245,7 +245,8 @@ export function RegistrationForm({
             </Select>
             <Input
               label="University Website"
-              placeholder="https://www.university.edu"
+              required
+              placeholder="asu.edu or https://www.asu.edu"
               error={errors.university_website?.message}
               {...register("university_website")}
             />
@@ -398,7 +399,9 @@ export function RegistrationForm({
             <Input
               type="tel"
               label="Phone Number"
-              placeholder="+1 555 123 4567"
+              required
+              placeholder="+1 562 985 4111 / +91 98765 43210"
+              hint="Include your country code."
               error={errors.contact_phone?.message}
               {...register("contact_phone")}
             />
