@@ -21,6 +21,9 @@ export const step1Schema = z
     pricing_tier: z
       .enum(["EARLYBIRD", "STANDARD", "PREMIUM"])
       .optional(),
+    // v15 — itinerary stop ids the university will attend. Server
+    // validates each id is a public stop of the fair before persisting.
+    event_optins: z.array(z.string()).optional(),
     // Legacy mirror — kept in sync with total_reps server-side.
     number_of_reps: z
       .number({ message: "Reps must be a number." })

@@ -67,6 +67,26 @@ export async function POST(req: Request) {
     );
   }
 
+  // Dedupe: one registration per (fair, email). Case-insensitive;
+  // a CANCELLED registration may re-register. `.limit(1)` (not
+  // maybeSingle) so pre-existing legacy duplicates don't throw.
+  const { data: dupes } = await supabase
+    .from("registrations")
+    .select("id")
+    .eq("fair_id", input.fair_id)
+    .ilike("contact_email", input.contact_email)
+    .neq("status", "cancelled")
+    .limit(1);
+  if (dupes && dupes.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "This email is already registered for this fair. To change your booth or details, contact eduadviser@iaesgujarat.org.",
+      },
+      { status: 409 }
+    );
+  }
+
   // --------------------------------------------------------------
   // Lock the tier + booth fee server-side. The client is NEVER
   // trusted for amounts; "PREMIUM" only switches the path.
@@ -222,6 +242,31 @@ export async function POST(req: Request) {
       { error: regErr?.message || "Could not create registration." },
       { status: 500 }
     );
+  }
+
+  // ---- 1b. Event opt-ins (v15) — best-effort, never fail the
+  // registration over attendance-planning data. Only persist ids
+  // that are genuinely public stops of THIS fair.
+  if (input.event_optins && input.event_optins.length > 0) {
+    try {
+      const { data: pub } = await supabase
+        .from("fair_itinerary")
+        .select("id")
+        .eq("fair_id", input.fair_id)
+        .eq("is_public", true);
+      const valid = new Set((pub ?? []).map((p) => p.id as string));
+      const rows = input.event_optins
+        .filter((id) => valid.has(id))
+        .map((itinerary_stop_id) => ({
+          registration_id: registration.id,
+          itinerary_stop_id,
+        }));
+      if (rows.length > 0) {
+        await supabase.from("registration_event_optin").insert(rows);
+      }
+    } catch (e) {
+      console.error("Event opt-in persist failed (non-fatal):", e);
+    }
   }
 
   // ---- 2. Billing details (INR only) --------------------------

@@ -19,7 +19,11 @@ import {
 import { BoothConfigurator } from "@/components/BoothConfigurator";
 import { PricingCards } from "@/components/PricingCards";
 import { formatINR, formatUSD } from "@/lib/utils";
-import type { Fair, PricingTier } from "@/types";
+import type { Fair, PricingTier, FairItineraryStop } from "@/types";
+import {
+  ITINERARY_EVENT_LABELS,
+  itineraryTimeRange,
+} from "@/lib/itinerary";
 
 const STEPS = ["University", "Contact", "Payment"] as const;
 
@@ -33,11 +37,21 @@ const INDIAN_STATES = [
   "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
 ] as const;
 
-export function RegistrationForm({ fair }: { fair: Fair }) {
+export function RegistrationForm({
+  fair,
+  stops = [],
+}: {
+  fair: Fair;
+  stops?: FairItineraryStop[];
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // v15 — event opt-in. Default: all public stops checked (opt-out).
+  const [eventStops, setEventStops] = useState<Set<string>>(
+    () => new Set(stops.map((s) => s.id))
+  );
   const pricing = getFairPricing(fair);
 
   const {
@@ -144,7 +158,10 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          event_optins: Array.from(eventStops),
+        }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -281,6 +298,66 @@ export function RegistrationForm({ fair }: { fair: Fair }) {
                 </p>
               )}
             </>
+          )}
+
+          {stops.length > 0 && (
+            <fieldset className="rounded-xl border border-navy/10 bg-cream/40 p-5">
+              <legend className="px-1 text-sm font-medium text-navy">
+                Which days will your team attend?
+              </legend>
+              <p className="-mt-1 mb-3 text-xs text-navy/55">
+                Tick the stops you plan to attend — this helps us plan
+                travel &amp; meals. You can change it later; just ask us.
+              </p>
+              <div className="space-y-2">
+                {stops.map((s) => {
+                  const checked = eventStops.has(s.id);
+                  const when = new Date(s.event_date).toLocaleDateString(
+                    "en-IN",
+                    { day: "numeric", month: "short" }
+                  );
+                  const time = itineraryTimeRange(s);
+                  const place =
+                    s.institution_name || s.venue_name || s.city;
+                  return (
+                    <label
+                      key={s.id}
+                      className="flex cursor-pointer items-start gap-2.5 rounded-md border border-navy/10 bg-white p-3 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-navy"
+                        checked={checked}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setEventStops((prev) => {
+                            const next = new Set(prev);
+                            if (on) next.add(s.id);
+                            else next.delete(s.id);
+                            return next;
+                          });
+                        }}
+                      />
+                      <span>
+                        <span className="font-medium text-navy">
+                          Day {s.day_number} · {when} — {place}
+                        </span>
+                        {!s.is_confirmed && (
+                          <span className="ml-2 rounded-full border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700">
+                            TBC
+                          </span>
+                        )}
+                        <span className="block text-xs text-navy/55">
+                          {ITINERARY_EVENT_LABELS[s.event_type]}
+                          {s.city ? ` · ${s.city}` : ""}
+                          {time ? ` · ${time}` : ""}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
           )}
 
           <div className="flex items-center justify-end pt-2">

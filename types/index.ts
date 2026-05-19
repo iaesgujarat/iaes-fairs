@@ -84,6 +84,13 @@ export interface Fair {
   stat_cached_at?: string | null;
 }
 
+export interface RegistrationEventOptin {
+  id: string;
+  registration_id: string;
+  itinerary_stop_id: string;
+  created_at: string;
+}
+
 export interface WaitlistSignup {
   id: string;
   university_name: string;

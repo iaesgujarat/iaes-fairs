@@ -344,13 +344,11 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                           Invoice
                         </Button>
                       </Link>
-                      {r.pricing_tier === "PREMIUM" && (
-                        <Link href={`/admin/registrations/${r.id}`}>
-                          <Button size="sm" variant="outline">
-                            Manage
-                          </Button>
-                        </Link>
-                      )}
+                      <Link href={`/admin/registrations/${r.id}`}>
+                        <Button size="sm" variant="outline">
+                          Manage
+                        </Button>
+                      </Link>
                       {r.status !== "confirmed" && r.status !== "cancelled" && (
                         <Button
                           size="sm"

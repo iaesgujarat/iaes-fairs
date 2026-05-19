@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RegistrationForm } from "@/components/RegistrationForm";
+import { fetchPublicItinerary } from "@/lib/itinerary";
 import { isRegistrationOpen } from "@/lib/fairStatus";
 import type { Fair } from "@/types";
 
@@ -57,6 +58,9 @@ export default async function RegisterPage() {
     );
   }
 
+  // v15 — public itinerary stops the registrant can opt into.
+  const stops = await fetchPublicItinerary(supabase, (fair as Fair).id);
+
   return (
     <>
       <SiteHeader variant="light" />
@@ -75,7 +79,7 @@ export default async function RegisterPage() {
         </div>
 
         <div className="rounded-lg border border-navy/10 bg-white p-6 shadow-card sm:p-8">
-          <RegistrationForm fair={fair as Fair} />
+          <RegistrationForm fair={fair as Fair} stops={stops} />
         </div>
 
         <p className="mt-6 text-center text-xs text-navy/50">

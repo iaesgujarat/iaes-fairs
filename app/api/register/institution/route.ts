@@ -67,6 +67,26 @@ export async function POST(req: Request) {
     );
   }
 
+  // Dedupe: one institution registration per (fair, email).
+  // Case-insensitive; cancelled may re-register; .limit(1) so any
+  // pre-existing legacy duplicates don't throw.
+  const { data: instDupes } = await supabase
+    .from("institution_registrations")
+    .select("id")
+    .eq("fair_id", input.fair_id)
+    .ilike("email", input.email)
+    .neq("status", "cancelled")
+    .limit(1);
+  if (instDupes && instDupes.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "This email is already registered for this fair. To update your details, contact eduadviser@iaesgujarat.org.",
+      },
+      { status: 409 }
+    );
+  }
+
   const { data: registration, error: regErr } = await supabase
     .from("institution_registrations")
     .insert({

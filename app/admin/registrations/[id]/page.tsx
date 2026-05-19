@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PremiumLogoManager } from "@/components/PremiumLogoManager";
+import { EventOptinEditor } from "@/components/EventOptinEditor";
 import { formatUSD, formatDateShort } from "@/lib/utils";
+import type { FairItineraryStop } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function AdminRegistrationPage({
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      `id, university_name, contact_name, contact_email, contact_phone,
+      `id, fair_id, university_name, contact_name, contact_email, contact_phone,
        pricing_tier, total_tables, total_reps, status,
        backdrop_received, backdrop_received_at, backdrop_png_url,
        logo_reminder_sent_at, created_at,
@@ -46,6 +48,22 @@ export default async function AdminRegistrationPage({
   const fair = Array.isArray(reg.fair) ? reg.fair[0] : reg.fair;
   const invoice = Array.isArray(reg.invoices) ? reg.invoices[0] : null;
   const isPremium = reg.pricing_tier === "PREMIUM";
+
+  // v15 — event opt-in (any tier): public stops + this reg's picks.
+  const { data: stopRows } = await supabase
+    .from("fair_itinerary")
+    .select("*")
+    .eq("fair_id", reg.fair_id)
+    .eq("is_public", true)
+    .order("sort_order", { ascending: true });
+  const stops = (stopRows as FairItineraryStop[] | null) ?? [];
+  const { data: optRows } = await supabase
+    .from("registration_event_optin")
+    .select("itinerary_stop_id")
+    .eq("registration_id", reg.id);
+  const optedIds = (optRows ?? []).map(
+    (o) => o.itinerary_stop_id as string
+  );
 
   return (
     <>
@@ -98,20 +116,25 @@ export default async function AdminRegistrationPage({
           </span>
         </div>
 
-        {!isPremium ? (
-          <div className="mt-8 rounded-md border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-            This is a {reg.pricing_tier} registration. Premium logo /
-            backdrop tools apply only to premium booths. Manage it from the{" "}
-            <Link
-              href="/admin/dashboard"
-              className="font-medium underline"
-            >
-              registrations dashboard
-            </Link>
-            .
+        <div className="mt-8 space-y-6">
+          {/* Event attendance — all tiers (v15) */}
+          <div className="rounded-lg border border-navy/10 bg-white p-5 shadow-card">
+            <p className="text-xs uppercase tracking-wider text-navy/55">
+              Event attendance
+            </p>
+            <p className="mb-3 mt-1 text-xs text-navy/50">
+              Itinerary stops this university will attend — for travel /
+              meal / headcount planning.
+            </p>
+            <EventOptinEditor
+              registrationId={reg.id}
+              stops={stops}
+              initialSelectedIds={optedIds}
+            />
           </div>
-        ) : (
-          <div className="mt-8 space-y-6">
+
+          {isPremium && (
+            <>
             <div className="rounded-lg border border-navy/10 bg-white p-5 shadow-card">
               <p className="text-xs uppercase tracking-wider text-navy/55">
                 Premium booth
@@ -189,8 +212,9 @@ export default async function AdminRegistrationPage({
                 This checklist is for coordination only — not stored.
               </p>
             </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </main>
 
       <SiteFooter />
