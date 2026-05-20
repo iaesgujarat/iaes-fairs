@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { campusHostRequestSchema } from "@/lib/schemas";
+import { sendAdminNotification } from "@/lib/adminNotify";
 import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
@@ -79,6 +80,28 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  // Internal admin alert — non-blocking. No dedicated admin page yet
+  // for campus_host_requests, so the email itself carries everything
+  // an admin needs to reach out to the official directly.
+  await sendAdminNotification({
+    subject: `New campus-host request: ${input.institution_name} — ${f.name}`,
+    title: "New campus-host request",
+    subtitle: input.institution_name,
+    rows: [
+      { label: "Fair", value: f.name },
+      { label: "Institution", value: input.institution_name },
+      { label: "Website", value: input.website || "—" },
+      { label: "Official", value: input.official_name },
+      { label: "Email", value: input.official_email },
+      { label: "Phone", value: input.official_phone },
+      { label: "Programs", value: input.study_programs.join(", ") },
+      { label: "Participants", value: input.approx_participants },
+      { label: "Proposed slot", value: input.proposed_datetime },
+    ],
+    note:
+      "No dedicated admin page yet — review in Supabase 'campus_host_requests' table or reply directly to the official's email above to coordinate.",
+  });
 
   return NextResponse.json({ requestId: request.id });
 }

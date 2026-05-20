@@ -16,6 +16,7 @@ import {
 } from "@/lib/booth";
 import { registrationSchema, TERMS_VERSION } from "@/lib/schemas";
 import { formatFairDateRange } from "@/lib/mailerHelpers";
+import { sendAdminNotification } from "@/lib/adminNotify";
 import type { Fair, PricingTier } from "@/types";
 
 export const runtime = "nodejs";
@@ -397,6 +398,41 @@ export async function POST(req: Request) {
       console.error("Confirmation email failed:", e);
     }
 
+    // Internal admin alert — non-blocking, fire-and-forget.
+    await sendAdminNotification({
+      subject: `New university registration: ${input.university_name} — ${tierLabel} · USD ${boothTotalUSD.toLocaleString()}`,
+      title: "New university registration",
+      subtitle: `${input.university_name} · ${input.university_country} — ${tierLabel}`,
+      rows: [
+        { label: "Fair", value: f.name },
+        {
+          label: "Contact",
+          value: input.contact_title
+            ? `${input.contact_name} (${input.contact_title})`
+            : input.contact_name,
+        },
+        { label: "Email", value: input.contact_email },
+        { label: "Phone", value: input.contact_phone || "—" },
+        { label: "Tier", value: tierLabel },
+        {
+          label: "Booth",
+          value: `USD ${boothTotalUSD.toLocaleString()} · paying in ${input.payment_currency}`,
+        },
+        {
+          label: "Config",
+          value: `${totalTables} table${totalTables > 1 ? "s" : ""} · ${totalReps} rep${totalReps > 1 ? "s" : ""}${
+            addonTables > 0 ? ` (+${addonTables} extra table${addonTables > 1 ? "s" : ""})` : ""
+          }${addonReps > 0 ? ` (+${addonReps} extra rep${addonReps > 1 ? "s" : ""})` : ""}`,
+        },
+        { label: "Proforma", value: proformaRef },
+      ],
+      ctaUrl: `${appUrl}/admin/registrations/${registration.id}`,
+      ctaLabel: "Open in admin",
+      note: isPremium
+        ? "Premium booth — coordinate logo + backdrop with the registrant ahead of the premium deadline."
+        : undefined,
+    });
+
     return NextResponse.json({
       registrationId: registration.id,
       gatewayActive: false,
@@ -467,6 +503,34 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("Invoice email failed:", e);
   }
+
+  // Internal admin alert — non-blocking, fire-and-forget. Same shape
+  // as the gateway-OFF branch above but flagged as a TAX-invoice path.
+  await sendAdminNotification({
+    subject: `New university registration: ${input.university_name} — ${tierLabel} · USD ${boothTotalUSD.toLocaleString()} (gateway ON)`,
+    title: "New university registration (gateway ON)",
+    subtitle: `${input.university_name} · ${input.university_country} — ${tierLabel}`,
+    rows: [
+      { label: "Fair", value: f.name },
+      {
+        label: "Contact",
+        value: input.contact_title
+          ? `${input.contact_name} (${input.contact_title})`
+          : input.contact_name,
+      },
+      { label: "Email", value: input.contact_email },
+      { label: "Phone", value: input.contact_phone || "—" },
+      { label: "Tier", value: tierLabel },
+      {
+        label: "Booth",
+        value: `USD ${boothTotalUSD.toLocaleString()} · paying in ${input.payment_currency}`,
+      },
+      { label: "Invoice #", value: invoice.invoice_number ?? "—" },
+    ],
+    ctaUrl: `${appUrl}/admin/registrations/${registration.id}`,
+    ctaLabel: "Open in admin",
+    note: "Tax invoice issued. Payment link sent to the registrant.",
+  });
 
   return NextResponse.json({
     registrationId: registration.id,
