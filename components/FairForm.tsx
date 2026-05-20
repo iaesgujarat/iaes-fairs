@@ -23,6 +23,7 @@ interface FormState {
   city: string;
   venue: string;
   description: string;
+  expected_footfall: string;
 
   fair_date_start: string;
   fair_date_end: string;
@@ -61,6 +62,7 @@ function fromFair(fair: Fair): FormState {
     city: fair.city || "Ahmedabad",
     venue: fair.venue || "",
     description: fair.description || "",
+    expected_footfall: fair.expected_footfall || "",
     fair_date_start: fair.fair_date_start || fair.fair_date || "",
     fair_date_end: fair.fair_date_end || "",
     arrive_by: fair.arrive_by || "",
@@ -91,6 +93,7 @@ const EMPTY_STATE: FormState = {
   city: "Ahmedabad",
   venue: "",
   description: "",
+  expected_footfall: "",
   fair_date_start: "",
   fair_date_end: "",
   arrive_by: "",
@@ -188,6 +191,7 @@ export function FairForm({ fair, mode }: Props) {
       city: state.city || "Ahmedabad",
       venue: state.venue,
       description: state.description,
+      expected_footfall: state.expected_footfall.trim(),
 
       fair_date_start: state.fair_date_start,
       fair_date_end: state.fair_date_end,
@@ -277,6 +281,13 @@ export function FairForm({ fair, mode }: Props) {
           required
           value={state.description}
           onChange={(e) => setField("description", e.target.value)}
+        />
+        <Input
+          label="Expected Footfall"
+          placeholder="e.g. 1,000+ students"
+          hint="Shown on the landing page stat card. Leave blank to display 'TBC'."
+          value={state.expected_footfall}
+          onChange={(e) => setField("expected_footfall", e.target.value)}
         />
       </Section>
 

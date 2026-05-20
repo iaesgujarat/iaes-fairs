@@ -68,6 +68,10 @@ export interface Fair {
   postfair_data_sent_at?: string | null;
   itinerary_sent_at?: string | null;
 
+  // ---- v17 follow-up — admin-editable hero stat (replaces the
+  // hardcoded "1,000+ students" in FairDetails). NULL → UI "TBC".
+  expected_footfall?: string | null;
+
   // ---- v11 itinerary (populated when fetched alongside the fair) ----
   itinerary?: FairItineraryStop[];
 

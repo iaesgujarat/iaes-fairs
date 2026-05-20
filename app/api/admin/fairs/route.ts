@@ -10,6 +10,7 @@ const createFairSchema = z.object({
   city: z.string().min(1).max(120).default("Ahmedabad"),
   venue: z.string().min(1).max(200),
   description: z.string().min(1).max(4000),
+  expected_footfall: z.string().max(80).optional().or(z.literal("")),
 
   fair_date_start: z.iso.date(),
   fair_date_end: z.iso.date(),
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
     city: input.city,
     venue: input.venue,
     description: input.description,
+    expected_footfall: input.expected_footfall || null,
     fair_date: input.fair_date || input.fair_date_start,
     fair_date_start: input.fair_date_start,
     fair_date_end: input.fair_date_end,

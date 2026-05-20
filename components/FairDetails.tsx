@@ -52,7 +52,10 @@ export function FairDetails({ fair }: { fair: Fair }) {
     },
     {
       label: "Expected Footfall",
-      value: "1,000+ students",
+      // Admin-editable via FairForm → /api/admin/fairs (migration 0023).
+      // No more hardcoded numbers; "TBC" when admin hasn't set a value
+      // so a fresh fair never inherits a stale figure.
+      value: fair.expected_footfall?.trim() || "TBC",
       sub: "Across all academic streams",
       icon: Users,
     },

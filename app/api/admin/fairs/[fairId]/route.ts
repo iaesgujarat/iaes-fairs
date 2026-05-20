@@ -14,6 +14,7 @@ const editFairSchema = z
     city: z.string().min(1).max(120).optional(),
     venue: z.string().min(1).max(200).optional(),
     description: z.string().min(1).max(4000).optional(),
+    expected_footfall: z.string().max(80).optional().or(z.literal("")),
     fair_date: z.iso.date().optional(),
     fair_date_start: z.iso.date().optional(),
     fair_date_end: z.iso.date().optional(),
@@ -87,7 +88,8 @@ export async function PUT(
     );
   }
 
-  // Normalise blank strings to null for nullable dates
+  // Normalise blank strings to null for nullable dates / text fields,
+  // and 0 to null for the optional price tiers.
   const update: Record<string, unknown> = { ...parsed.data };
   for (const k of [
     "arrive_by",
@@ -98,6 +100,7 @@ export async function PUT(
     "premium_deadline",
     "price_premium_usd",
     "price_premium_inr",
+    "expected_footfall",
   ]) {
     if (update[k] === "" || update[k] === 0) update[k] = null;
   }
