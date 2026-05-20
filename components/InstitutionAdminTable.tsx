@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { formatDateShort } from "@/lib/utils";
@@ -22,10 +23,43 @@ const STATUSES: (InstitutionStatus | "all")[] = [
 ];
 
 export function InstitutionAdminTable({ rows }: { rows: Row[] }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<InstitutionStatus | "all">(
     "all"
   );
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Lifecycle transition. Cancel asks for confirmation (destructive);
+  // Confirm and Reactivate go straight through. router.refresh() re-runs
+  // the server component so the table reflects the new status + stats.
+  async function updateStatus(id: string, next: InstitutionStatus) {
+    if (savingId) return;
+    if (next === "cancelled") {
+      const ok = window.confirm(
+        "Cancel this institution registration? They'll be excluded from totals. You can reactivate later."
+      );
+      if (!ok) return;
+    }
+    setSavingId(id);
+    try {
+      const res = await fetch(`/api/admin/institutions/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(data?.error ?? "Could not update status.");
+        return;
+      }
+      router.refresh();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -128,6 +162,41 @@ export function InstitutionAdminTable({ rows }: { rows: Row[] }) {
                 </td>
                 <td className="px-4 py-3">
                   <StatusPill status={r.status} />
+                  <div className="mt-1.5 flex flex-wrap gap-2 text-[11px]">
+                    {savingId === r.id ? (
+                      <span className="text-navy/45">Saving…</span>
+                    ) : (
+                      <>
+                        {r.status === "registered" && (
+                          <button
+                            type="button"
+                            onClick={() => updateStatus(r.id, "confirmed")}
+                            className="font-medium text-emerald-700 hover:underline"
+                          >
+                            Confirm
+                          </button>
+                        )}
+                        {r.status !== "cancelled" && (
+                          <button
+                            type="button"
+                            onClick={() => updateStatus(r.id, "cancelled")}
+                            className="text-red-600 hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        {r.status === "cancelled" && (
+                          <button
+                            type="button"
+                            onClick={() => updateStatus(r.id, "registered")}
+                            className="font-medium text-navy hover:underline"
+                          >
+                            Reactivate
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-navy/65">
                   {formatDateShort(r.created_at)}

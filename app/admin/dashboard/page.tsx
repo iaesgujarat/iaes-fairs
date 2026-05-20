@@ -325,7 +325,12 @@ async function InstitutionTab() {
 
   const rows: InstRow[] = (institutions as InstRow[]) || [];
 
-  const totalStudents = rows.reduce(
+  // Active rows = anything not cancelled. Used for the headline stats
+  // so a cancelled row doesn't inflate "Institutions Registered" or
+  // "Total Expected Students". Cancelled rows are still shown in the
+  // table (with the Reactivate action) just not counted in the totals.
+  const activeRows = rows.filter((r) => r.status !== "cancelled");
+  const totalStudents = activeRows.reduce(
     (sum, r) => sum + Number(r.expected_student_count || 0),
     0
   );
@@ -335,7 +340,7 @@ async function InstitutionTab() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Institutions Registered"
-          value={rows.length.toString()}
+          value={activeRows.length.toString()}
         />
         <StatCard
           label="Total Expected Students"
