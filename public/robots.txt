@@ -1,0 +1,17 @@
+# IAES Fairs — robots
+User-agent: *
+Allow: /
+
+# Private surfaces: don't index
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /payment/
+Disallow: /invoice/
+Disallow: /confirmation/
+Disallow: /portal/
+
+# PWA assets must remain crawlable for installability / Lighthouse
+Allow: /sw.js
+Allow: /manifest.webmanifest
+Allow: /icons/

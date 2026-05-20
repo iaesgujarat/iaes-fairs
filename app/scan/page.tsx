@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { QRScanner } from "@/components/QRScanner";
+import { InstallHint } from "@/components/InstallHint";
 
 const STORAGE_KEY = "iaes.scan.university";
 
@@ -184,6 +185,7 @@ export default function ScanLandingPage() {
             &larr; Back to home
           </Link>
         </div>
+        <InstallHint />
       </main>
     );
   }
@@ -259,6 +261,7 @@ export default function ScanLandingPage() {
           {savedCount !== null ? ` (${savedCount})` : ""} &rarr;
         </Link>
       </div>
+      <InstallHint />
     </main>
   );
 }

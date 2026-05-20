@@ -44,3 +44,9 @@ supabase/.branches/
 
 # Local Netlify folder
 .netlify
+
+# v17 — service worker build artifacts (Serwist regenerates them
+# from app/sw.ts on every build; SOURCE is tracked, BUNDLE is not).
+public/sw.js
+public/swe-worker-*.js
+public/workbox-*.js

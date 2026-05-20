@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StudentPassCard } from "@/components/StudentPassCard";
+import { InstallHint } from "@/components/InstallHint";
 import type { Fair, FairStudentPass } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,7 @@ export default async function StudentPassPage({
           They&rsquo;ll scan it to see your profile.
         </p>
       </div>
+      <InstallHint />
     </main>
   );
 }

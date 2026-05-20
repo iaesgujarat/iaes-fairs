@@ -14,6 +14,26 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# v17 — service worker: must NOT be aggressively cached so a fresh
+# deploy's SW takes effect on the next page load (Serwist's
+# skipWaiting + clientsClaim then promote it immediately).
+# Service-Worker-Allowed = "/" lets the SW control the whole origin
+# even when served from /sw.js.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+# v17 — web manifest: correct MIME so the Application tab in Chrome
+# DevTools / Lighthouse parses it; revalidate so manifest changes
+# (e.g. icon swap) are picked up promptly.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # Scheduled Functions live under netlify/functions/*.mts
 # (each file declares its own cron via `export const config`).
 [functions]

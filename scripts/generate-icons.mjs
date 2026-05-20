@@ -277,4 +277,12 @@ gen("favicon.png", () => {
   return encodePng(px, 48, 48);
 });
 
+// 6. Next.js App Router icon conventions — copies of the relevant
+//    PNGs at well-known paths so Next auto-serves them as the
+//    favicon + apple-touch icon (replacing the old white-bg JPEGs).
+fs.copyFileSync(path.join(OUT, "icon-512.png"), path.join("app", "icon.png"));
+console.log("  copied -> app/icon.png");
+fs.copyFileSync(path.join(OUT, "apple-icon.png"), path.join("app", "apple-icon.png"));
+console.log("  copied -> app/apple-icon.png");
+
 console.log(`Done in ${Date.now() - t0}ms.`);
