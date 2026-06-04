@@ -17,7 +17,14 @@ import {
 import { registrationSchema, TERMS_VERSION } from "@/lib/schemas";
 import { formatFairDateRange } from "@/lib/mailerHelpers";
 import { sendAdminNotification } from "@/lib/adminNotify";
-import type { Fair, PricingTier } from "@/types";
+import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import type {
+  Fair,
+  PricingTier,
+  Registration,
+  Invoice,
+  BillingDetails,
+} from "@/types";
 
 export const runtime = "nodejs";
 
@@ -40,6 +47,24 @@ export async function POST(req: Request) {
     );
   }
   const input = parsed.data;
+
+  // v19 — Mode A "Attn:" recipient (USD path only). When the registrant
+  // chose to address the invoice to someone else, capture those fields;
+  // otherwise they stay null (INR/Mode B is handled via billing_details).
+  const attnActive =
+    input.payment_currency === "USD" && input.bill_to_self === false;
+  const billToAttnName = attnActive ? input.bill_to_attn_name?.trim() || null : null;
+  const billToAttnTitle = attnActive ? input.bill_to_attn_title?.trim() || null : null;
+  const billToAttnEmail = attnActive ? input.bill_to_attn_email?.trim() || null : null;
+  const billToCc = attnActive ? !!input.bill_to_cc : false;
+  // Extra email copy: only when the registrant opted in AND it differs
+  // from the primary recipient.
+  const proformaCc =
+    billToCc &&
+    billToAttnEmail &&
+    billToAttnEmail.toLowerCase() !== input.contact_email.toLowerCase()
+      ? [billToAttnEmail]
+      : undefined;
 
   if (input.terms_accepted !== true) {
     return NextResponse.json(
@@ -234,6 +259,10 @@ export async function POST(req: Request) {
       terms_accepted: true,
       terms_accepted_at: new Date().toISOString(),
       terms_version: TERMS_VERSION,
+      bill_to_attn_name: billToAttnName,
+      bill_to_attn_title: billToAttnTitle,
+      bill_to_attn_email: billToAttnEmail,
+      bill_to_cc: billToCc,
     })
     .select()
     .single();
@@ -296,6 +325,24 @@ export async function POST(req: Request) {
     }
   }
 
+  // Billing snapshot for the attached PDF (INR / India-office path).
+  const billingForPdf: BillingDetails | null =
+    input.payment_currency === "INR"
+      ? ({
+          id: "",
+          registration_id: registration.id,
+          legal_name: input.legal_name!,
+          billing_address: input.billing_address!,
+          city: input.city!,
+          state: input.state!,
+          pin_code: input.pin_code!,
+          pan_number: input.pan_number!,
+          is_gst_registered: !!input.is_gst_registered,
+          gstin: input.gstin || null,
+          created_at: "",
+        } as BillingDetails)
+      : null;
+
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     "https://fairs.iaesgujarat.org";
@@ -350,6 +397,14 @@ export async function POST(req: Request) {
       );
     }
 
+    const proformaPdf = await renderInvoiceAttachment(supabase, {
+      registration: registration as Registration,
+      invoice: proforma as Invoice,
+      fair: f,
+      billing: billingForPdf,
+    });
+    const proformaAttachments = proformaPdf ? [proformaPdf] : undefined;
+
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = getResend();
@@ -357,6 +412,8 @@ export async function POST(req: Request) {
           await resend.emails.send({
             from: FROM_EMAIL,
             to: input.contact_email,
+            cc: proformaCc,
+            attachments: proformaAttachments,
             subject: `💎 Premium Booth Reserved — ${f.name} (${proformaRef})`,
             react: PremiumConfirmationEmail({
               contactName: input.contact_name,
@@ -372,6 +429,8 @@ export async function POST(req: Request) {
           await resend.emails.send({
             from: FROM_EMAIL,
             to: input.contact_email,
+            cc: proformaCc,
+            attachments: proformaAttachments,
             subject: `You're registered — ${f.name} (${proformaRef})`,
             react: ProformaEmail({
               contactName: input.contact_name,
@@ -390,6 +449,7 @@ export async function POST(req: Request) {
               addonRepsCostUSD,
               tierLabel: tierLabel === "Premium" ? "Standard" : tierLabel,
               totalUSD: boothTotalUSD,
+              addressedTo: billToAttnName,
             }),
           });
         }
@@ -476,12 +536,20 @@ export async function POST(req: Request) {
     .eq("id", registration.id);
 
   const payUrl = `${appUrl}/payment/${registration.id}`;
+  const invoicePdf = await renderInvoiceAttachment(supabase, {
+    registration: registration as Registration,
+    invoice: invoice as Invoice,
+    fair: f,
+    billing: billingForPdf,
+  });
   try {
     if (process.env.RESEND_API_KEY) {
       const resend = getResend();
       await resend.emails.send({
         from: FROM_EMAIL,
         to: input.contact_email,
+        cc: proformaCc,
+        attachments: invoicePdf ? [invoicePdf] : undefined,
         subject: `Invoice for ${f.name} — ${invoice.invoice_number}`,
         react: InvoiceEmail({
           contactName: input.contact_name,
@@ -497,6 +565,7 @@ export async function POST(req: Request) {
             : null,
           dueDate: f.registration_deadline,
           payUrl,
+          addressedTo: billToAttnName,
         }),
       });
     }

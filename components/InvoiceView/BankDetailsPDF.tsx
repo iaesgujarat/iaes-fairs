@@ -1,5 +1,3 @@
-"use client";
-
 import { Text, View, StyleSheet } from "@react-pdf/renderer";
 import { IAES_BANK_INR_ROWS, IAES_BANK_USD_ROWS } from "@/lib/iaesBank";
 

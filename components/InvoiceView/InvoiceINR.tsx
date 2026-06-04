@@ -74,6 +74,10 @@ export function InvoiceINR({ registration, invoice, fair, billing }: Props) {
               <p className="text-sm text-navy/70">
                 GSTIN: {billing.gstin || "Unregistered"}
               </p>
+              <p className="mt-1.5 text-xs text-navy/55">
+                Service rendered for: {registration.university_name} —{" "}
+                {fair.name}
+              </p>
             </>
           ) : (
             <>

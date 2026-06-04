@@ -10,6 +10,8 @@ import { InvoiceUSD } from "@/components/InvoiceView/InvoiceUSD";
 import { InvoiceINR } from "@/components/InvoiceView/InvoiceINR";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
 import { fetchPublicItinerary } from "@/lib/itinerary";
+import { calculateGST } from "@/lib/gst";
+import { getAttnRecipient } from "@/lib/billTo";
 import type { Registration, Invoice, Fair, BillingDetails } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +81,7 @@ export default async function InvoicePage({
                 registration={registration}
                 invoice={invoice}
                 fair={fair}
+                billing={billing}
               />
             ) : isINR ? (
               <InvoiceINR
@@ -134,10 +137,12 @@ function ProformaView({
   registration,
   invoice,
   fair,
+  billing,
 }: {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
+  billing: BillingDetails | null;
 }) {
   const total = Number(invoice.total_amount_usd ?? invoice.base_amount_usd ?? 0);
   const addonCost = Number(registration.addon_cost_usd || 0);
@@ -149,6 +154,20 @@ function ProformaView({
   const indicativeINR = Number(invoice.total_amount_inr || 0);
   const tierLabel =
     registration.pricing_tier === "EARLYBIRD" ? "Early Bird" : "Standard";
+
+  // v19 — Mode B (India office, INR): bill the office + show an
+  // indicative GST estimate (the stored row carries no GST yet).
+  const isIndiaOffice = invoice.payment_currency === "INR" && !!billing;
+  const attn = getAttnRecipient(registration);
+  const gstEst = isIndiaOffice
+    ? calculateGST(
+        "INR",
+        Number(invoice.base_amount_usd ?? 0),
+        Number(invoice.forex_rate_used ?? 0),
+        billing!.state,
+        !!billing!.is_gst_registered
+      )
+    : null;
 
   return (
     <div className="space-y-8">
@@ -187,14 +206,49 @@ function ProformaView({
           <p className="text-xs uppercase tracking-wider text-navy/50">
             Billed To
           </p>
-          <p className="mt-2 font-medium text-navy">
-            {registration.university_name}
-          </p>
-          <p className="text-sm text-navy/70">{registration.contact_name}</p>
-          {registration.contact_title && (
-            <p className="text-sm text-navy/70">{registration.contact_title}</p>
+          {isIndiaOffice ? (
+            <>
+              <p className="mt-2 font-medium text-navy">
+                {billing!.legal_name}
+              </p>
+              <p className="text-sm text-navy/70">{billing!.billing_address}</p>
+              <p className="text-sm text-navy/70">
+                {billing!.city}, {billing!.state} - {billing!.pin_code}
+              </p>
+              <p className="text-sm text-navy/70">PAN: {billing!.pan_number}</p>
+              <p className="text-sm text-navy/70">
+                GSTIN: {billing!.gstin || "Unregistered"}
+              </p>
+              <p className="mt-1.5 text-xs text-navy/55">
+                Service rendered for: {registration.university_name} —{" "}
+                {fair.name}
+              </p>
+            </>
+          ) : attn ? (
+            <>
+              <p className="mt-2 font-medium text-navy">
+                {registration.university_name}
+              </p>
+              <p className="text-sm text-navy/70">Attn: {attn.name}</p>
+              {attn.title && (
+                <p className="text-sm text-navy/70">{attn.title}</p>
+              )}
+              <p className="text-sm text-navy/70">{attn.email}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 font-medium text-navy">
+                {registration.university_name}
+              </p>
+              <p className="text-sm text-navy/70">{registration.contact_name}</p>
+              {registration.contact_title && (
+                <p className="text-sm text-navy/70">
+                  {registration.contact_title}
+                </p>
+              )}
+              <p className="text-sm text-navy/70">{registration.contact_email}</p>
+            </>
           )}
-          <p className="text-sm text-navy/70">{registration.contact_email}</p>
         </div>
       </div>
 
@@ -266,8 +320,25 @@ function ProformaView({
       {invoice.payment_currency === "INR" && indicativeINR > 0 && (
         <div className="rounded-md bg-cream/70 p-4 text-sm">
           <p className="font-medium text-navy">
-            Indicative INR: {formatINR(indicativeINR)}
+            Indicative {gstEst ? "base: " : "INR: "}
+            {formatINR(indicativeINR)}
           </p>
+          {gstEst && gstEst.gstType === "IGST" && (
+            <p className="mt-0.5 text-navy/75">
+              + IGST @ {gstEst.igstPercent}%: {formatINR(gstEst.igstAmount)}
+            </p>
+          )}
+          {gstEst && gstEst.gstType === "CGST_SGST" && (
+            <p className="mt-0.5 text-navy/75">
+              + CGST @ {gstEst.cgstPercent}%: {formatINR(gstEst.cgstAmount)} ·
+              SGST @ {gstEst.sgstPercent}%: {formatINR(gstEst.sgstAmount)}
+            </p>
+          )}
+          {gstEst && (
+            <p className="mt-1 font-semibold text-navy">
+              = Indicative total (incl. GST): {formatINR(gstEst.totalAmountINR)}
+            </p>
+          )}
           <p className="mt-1 text-xs text-navy/60">
             {invoice.forex_rate_used
               ? `1 USD ≈ ₹${Number(invoice.forex_rate_used).toFixed(2)} `
@@ -284,7 +355,7 @@ function ProformaView({
                 })`
               : ""}
             . Final amount + GST will be locked at the live rate on the date
-            of payment, per CGST Rule 34(2) (GAAP, export of service).
+            of payment, per CGST Rule 34(2) (GAAP).
           </p>
         </div>
       )}

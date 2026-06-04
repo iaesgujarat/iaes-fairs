@@ -262,6 +262,13 @@ export interface Registration {
   backdrop_received?: boolean;
   backdrop_received_at?: string | null;
   logo_reminder_sent_at?: string | null;
+  // ---- v19 invoice recipient (Mode A "Attn:" override, optional
+  // until 0024). Legal billed entity stays the university; these
+  // only change WHO the document is addressed/emailed to. ----
+  bill_to_attn_name?: string | null;
+  bill_to_attn_title?: string | null;
+  bill_to_attn_email?: string | null;
+  bill_to_cc?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -311,6 +318,9 @@ export interface BillingDetails {
   pan_number: string;
   is_gst_registered: boolean;
   gstin: string | null;
+  // ---- v19: why a third-party Indian entity is billed (the
+  // university's instruction). Optional until 0024. ----
+  authorization_note?: string | null;
   created_at: string;
 }
 

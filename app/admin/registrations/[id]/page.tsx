@@ -6,8 +6,9 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PremiumLogoManager } from "@/components/PremiumLogoManager";
 import { EventOptinEditor } from "@/components/EventOptinEditor";
+import { RegistrationAdminControls } from "@/components/admin/RegistrationAdminControls";
 import { formatUSD, formatDateShort } from "@/lib/utils";
-import type { FairItineraryStop } from "@/types";
+import type { FairItineraryStop, BillingDetails } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,15 @@ export default async function AdminRegistrationPage({
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      `id, fair_id, university_name, contact_name, contact_email, contact_phone,
-       pricing_tier, total_tables, total_reps, status,
+      `id, fair_id, university_name, university_country, university_website,
+       contact_name, contact_title, contact_email, contact_phone,
+       payment_currency, pricing_tier, total_tables, total_reps, status,
+       bill_to_attn_name, bill_to_attn_title, bill_to_attn_email, bill_to_cc,
        backdrop_received, backdrop_received_at, backdrop_png_url,
        logo_reminder_sent_at, created_at,
        fair:fairs(name, premium_deadline, price_premium_usd),
-       invoices(proforma_reference, total_amount_usd)`
+       invoices(proforma_reference, total_amount_usd),
+       billing:billing_details(*)`
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -47,7 +51,23 @@ export default async function AdminRegistrationPage({
 
   const fair = Array.isArray(reg.fair) ? reg.fair[0] : reg.fair;
   const invoice = Array.isArray(reg.invoices) ? reg.invoices[0] : null;
+  const billing = (Array.isArray(reg.billing)
+    ? reg.billing[0]
+    : reg.billing) as BillingDetails | null;
   const isPremium = reg.pricing_tier === "PREMIUM";
+
+  // v19 — billing recipient state for the admin controls.
+  const isLocked = reg.status === "paid" || reg.status === "confirmed";
+  const currentMode: "university" | "india_office" =
+    reg.payment_currency === "INR" && billing ? "india_office" : "university";
+  const attn = reg.bill_to_attn_name
+    ? {
+        name: reg.bill_to_attn_name as string,
+        title: (reg.bill_to_attn_title as string) ?? "",
+        email: (reg.bill_to_attn_email as string) ?? "",
+        cc: !!reg.bill_to_cc,
+      }
+    : null;
 
   // v15 — event opt-in (any tier): public stops + this reg's picks.
   const { data: stopRows } = await supabase
@@ -132,6 +152,38 @@ export default async function AdminRegistrationPage({
               initialSelectedIds={optedIds}
             />
           </div>
+
+          <RegistrationAdminControls
+            registrationId={reg.id}
+            isLocked={isLocked}
+            status={reg.status as string}
+            details={{
+              university_name: (reg.university_name as string) ?? "",
+              university_country: (reg.university_country as string) ?? "",
+              university_website: (reg.university_website as string) ?? "",
+              contact_name: (reg.contact_name as string) ?? "",
+              contact_title: (reg.contact_title as string) ?? "",
+              contact_email: (reg.contact_email as string) ?? "",
+              contact_phone: (reg.contact_phone as string) ?? "",
+            }}
+            currentMode={currentMode}
+            attn={attn}
+            billing={
+              billing
+                ? {
+                    legal_name: billing.legal_name ?? "",
+                    billing_address: billing.billing_address ?? "",
+                    city: billing.city ?? "",
+                    state: billing.state ?? "",
+                    pin_code: billing.pin_code ?? "",
+                    pan_number: billing.pan_number ?? "",
+                    is_gst_registered: !!billing.is_gst_registered,
+                    gstin: billing.gstin ?? "",
+                    authorization_note: billing.authorization_note ?? "",
+                  }
+                : null
+            }
+          />
 
           {isPremium && (
             <>

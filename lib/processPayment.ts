@@ -1,7 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { ConfirmationEmail } from "@/emails/ConfirmationEmail";
-import type { Currency, Fair, Invoice } from "@/types";
+import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import type {
+  Currency,
+  Fair,
+  Invoice,
+  Registration,
+  BillingDetails,
+} from "@/types";
 
 type Supabase = ReturnType<typeof createAdminClient>;
 
@@ -169,15 +176,25 @@ async function sendConfirmation(
   try {
     const { data: regJoin } = await supabase
       .from("registrations")
-      .select(`*, fair:fairs(*)`)
+      .select(`*, fair:fairs(*), billing:billing_details(*)`)
       .eq("id", registrationId)
       .maybeSingle();
     if (!regJoin) return;
     const fair = regJoin.fair as Fair;
+    const billing = (Array.isArray(regJoin.billing)
+      ? regJoin.billing[0]
+      : regJoin.billing) as BillingDetails | null;
+    const pdf = await renderInvoiceAttachment(supabase, {
+      registration: regJoin as Registration,
+      invoice,
+      fair,
+      billing,
+    });
     const resend = getResend();
     await resend.emails.send({
       from: FROM_EMAIL,
       to: regJoin.contact_email,
+      attachments: pdf ? [pdf] : undefined,
       subject: `Booking confirmed — ${fair.name} · ${invoice.invoice_number ?? ""}`,
       react: ConfirmationEmail({
         contactName: regJoin.contact_name,

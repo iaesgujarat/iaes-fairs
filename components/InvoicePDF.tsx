@@ -1,5 +1,6 @@
-"use client";
-
+// Isomorphic: rendered client-side via PDFDownloadLink (InvoiceActions)
+// AND server-side via renderToBuffer (lib/invoicePdf) for email
+// attachments — so no "use client" directive.
 import {
   Document,
   Page,
@@ -9,6 +10,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { rupeesToWords } from "@/lib/invoice";
+import { getAttnRecipient } from "@/lib/billTo";
 import { IAES_LOGO_PATH } from "@/lib/brand";
 import type {
   Invoice,
@@ -26,6 +28,9 @@ interface Props {
   fair: Fair;
   billing: BillingDetails | null;
   itinerary?: FairItineraryStop[];
+  /** Logo source. Defaults to the public path (works client-side).
+   *  Server renders (email attachments) pass a data-URI. */
+  logoSrc?: string;
 }
 
 const IAES = {
@@ -274,6 +279,7 @@ export function InvoicePDF({
   fair,
   billing,
   itinerary = [],
+  logoSrc = IAES_LOGO_PATH,
 }: Props) {
   return invoice.payment_currency === "INR" ? (
     <InvoicePDFInr
@@ -282,6 +288,7 @@ export function InvoicePDF({
       fair={fair}
       billing={billing}
       itinerary={itinerary}
+      logoSrc={logoSrc}
     />
   ) : (
     <InvoicePDFUsd
@@ -289,6 +296,7 @@ export function InvoicePDF({
       invoice={invoice}
       fair={fair}
       itinerary={itinerary}
+      logoSrc={logoSrc}
     />
   );
 }
@@ -298,11 +306,13 @@ function InvoicePDFUsd({
   invoice,
   fair,
   itinerary = [],
+  logoSrc,
 }: {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
   itinerary?: FairItineraryStop[];
+  logoSrc: string;
 }) {
   return (
     <Document
@@ -312,7 +322,7 @@ function InvoicePDFUsd({
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>
-            <Image src={IAES_LOGO_PATH} style={styles.logo} />
+            <Image src={logoSrc} style={styles.logo} />
             <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>INVOICE</Text>
@@ -332,11 +342,32 @@ function InvoicePDFUsd({
           <View style={styles.partyBlock}>
             <Text style={styles.partyTitle}>Billed To</Text>
             <Text style={styles.partyName}>{registration.university_name}</Text>
-            <Text style={styles.partyLine}>{registration.contact_name}</Text>
-            {registration.contact_title && (
-              <Text style={styles.partyLine}>{registration.contact_title}</Text>
-            )}
-            <Text style={styles.partyLine}>{registration.contact_email}</Text>
+            {(() => {
+              const attn = getAttnRecipient(registration);
+              return attn ? (
+                <>
+                  <Text style={styles.partyLine}>Attn: {attn.name}</Text>
+                  {attn.title && (
+                    <Text style={styles.partyLine}>{attn.title}</Text>
+                  )}
+                  <Text style={styles.partyLine}>{attn.email}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.partyLine}>
+                    {registration.contact_name}
+                  </Text>
+                  {registration.contact_title && (
+                    <Text style={styles.partyLine}>
+                      {registration.contact_title}
+                    </Text>
+                  )}
+                  <Text style={styles.partyLine}>
+                    {registration.contact_email}
+                  </Text>
+                </>
+              );
+            })()}
             <Text style={styles.partyLine}>{registration.university_country}</Text>
           </View>
         </View>
@@ -466,12 +497,14 @@ function InvoicePDFInr({
   fair,
   billing,
   itinerary = [],
+  logoSrc,
 }: {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
   billing: BillingDetails | null;
   itinerary?: FairItineraryStop[];
+  logoSrc: string;
 }) {
   return (
     <Document
@@ -481,7 +514,7 @@ function InvoicePDFInr({
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>
-            <Image src={IAES_LOGO_PATH} style={styles.logo} />
+            <Image src={logoSrc} style={styles.logo} />
             <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <Text style={styles.invoiceLabel}>TAX INVOICE</Text>
@@ -512,6 +545,10 @@ function InvoicePDFInr({
                 <Text style={styles.partyLine}>PAN: {billing.pan_number}</Text>
                 <Text style={styles.partyLine}>
                   GSTIN: {billing.gstin || "Unregistered"}
+                </Text>
+                <Text style={[styles.partyLine, { marginTop: 3 }]}>
+                  Service rendered for: {registration.university_name} —{" "}
+                  {fair.name}
                 </Text>
               </>
             ) : (

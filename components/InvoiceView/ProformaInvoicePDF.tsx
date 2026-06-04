@@ -1,5 +1,6 @@
-"use client";
-
+// Isomorphic: rendered client-side via PDFDownloadLink (InvoiceActions)
+// AND server-side via renderToBuffer (lib/invoicePdf) for email
+// attachments — so no "use client" directive.
 import {
   Document,
   Page,
@@ -8,16 +9,30 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import type { Invoice, Registration, Fair, FairItineraryStop } from "@/types";
+import type {
+  Invoice,
+  Registration,
+  Fair,
+  FairItineraryStop,
+  BillingDetails,
+} from "@/types";
 import { BankDetailsPDF } from "./BankDetailsPDF";
 import { ItineraryBlockPDF } from "./ItineraryBlockPDF";
 import { IAES_LOGO_PATH } from "@/lib/brand";
+import { calculateGST } from "@/lib/gst";
+import { getAttnRecipient } from "@/lib/billTo";
 
 interface Props {
   registration: Registration;
   invoice: Invoice;
   fair: Fair;
+  /** v19 — present only when an India office is the billed party
+   *  (Mode B). Drives the billed-to block + indicative GST. */
+  billing?: BillingDetails | null;
   itinerary?: FairItineraryStop[];
+  /** Logo source. Defaults to the public path (works client-side).
+   *  Server renders (email attachments) pass a data-URI. */
+  logoSrc?: string;
 }
 
 const IAES = {
@@ -177,8 +192,26 @@ export function ProformaInvoicePDF({
   registration,
   invoice,
   fair,
+  billing = null,
   itinerary = [],
+  logoSrc = IAES_LOGO_PATH,
 }: Props) {
+  // v19 — Mode B (India office pays in INR): a separate legal entity
+  // is billed, and an indicative GST estimate is shown so the office
+  // can approve the all-in cost. The stored proforma row carries no
+  // GST (it's snapshotted at order time), so estimate it at render.
+  const isIndiaOffice = invoice.payment_currency === "INR" && !!billing;
+  const attn = getAttnRecipient(registration);
+  const gstEst = isIndiaOffice
+    ? calculateGST(
+        "INR",
+        Number(invoice.base_amount_usd ?? 0),
+        Number(invoice.forex_rate_used ?? 0),
+        billing!.state,
+        !!billing!.is_gst_registered
+      )
+    : null;
+
   const baseUSD =
     Number(invoice.base_amount_usd ?? 0) -
     Number(registration.addon_cost_usd || 0);
@@ -201,13 +234,15 @@ export function ProformaInvoicePDF({
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Image src={IAES_LOGO_PATH} style={styles.logo} />
+            <Image src={logoSrc} style={styles.logo} />
             <Text style={styles.brandSub}>International Education Fairs · Gujarat</Text>
           </View>
           <View>
             <Text style={styles.proformaLabel}>PROFORMA INVOICE</Text>
             <Text style={styles.proformaSubLabel}>
-              (Not a Tax Invoice — No GST applicable)
+              {isIndiaOffice
+                ? "(Not a Tax Invoice — indicative GST shown below)"
+                : "(Not a Tax Invoice — No GST applicable)"}
             </Text>
           </View>
         </View>
@@ -228,15 +263,53 @@ export function ProformaInvoicePDF({
           </View>
           <View style={styles.partyBlock}>
             <Text style={styles.partyTitle}>Billed To</Text>
-            <Text style={styles.partyName}>{registration.university_name}</Text>
-            <Text style={styles.partyLine}>{registration.contact_name}</Text>
-            {registration.contact_title && (
-              <Text style={styles.partyLine}>{registration.contact_title}</Text>
+            {isIndiaOffice ? (
+              <>
+                <Text style={styles.partyName}>{billing!.legal_name}</Text>
+                <Text style={styles.partyLine}>{billing!.billing_address}</Text>
+                <Text style={styles.partyLine}>
+                  {billing!.city}, {billing!.state} - {billing!.pin_code}
+                </Text>
+                <Text style={styles.partyLine}>PAN: {billing!.pan_number}</Text>
+                <Text style={styles.partyLine}>
+                  GSTIN: {billing!.gstin || "Unregistered"}
+                </Text>
+                <Text style={[styles.partyLine, { marginTop: 3 }]}>
+                  Service rendered for: {registration.university_name} —{" "}
+                  {fair.name}
+                </Text>
+              </>
+            ) : attn ? (
+              <>
+                <Text style={styles.partyName}>
+                  {registration.university_name}
+                </Text>
+                <Text style={styles.partyLine}>Attn: {attn.name}</Text>
+                {attn.title && (
+                  <Text style={styles.partyLine}>{attn.title}</Text>
+                )}
+                <Text style={styles.partyLine}>{attn.email}</Text>
+                <Text style={styles.partyLine}>
+                  {registration.university_country}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.partyName}>
+                  {registration.university_name}
+                </Text>
+                <Text style={styles.partyLine}>{registration.contact_name}</Text>
+                {registration.contact_title && (
+                  <Text style={styles.partyLine}>
+                    {registration.contact_title}
+                  </Text>
+                )}
+                <Text style={styles.partyLine}>{registration.contact_email}</Text>
+                <Text style={styles.partyLine}>
+                  {registration.university_country}
+                </Text>
+              </>
             )}
-            <Text style={styles.partyLine}>{registration.contact_email}</Text>
-            <Text style={styles.partyLine}>
-              {registration.university_country}
-            </Text>
           </View>
         </View>
 
@@ -334,7 +407,7 @@ export function ProformaInvoicePDF({
             }}
           >
             <Text style={{ fontSize: 9, color: "#3A5A94" }}>
-              Indicative INR amount: {fmtINR(indicativeINR)}
+              Indicative {gstEst ? "base " : ""}amount: {fmtINR(indicativeINR)}
               {invoice.forex_rate_used && invoice.forex_rate_date && (
                 <>
                   {" "}(at 1 USD = ₹{Number(invoice.forex_rate_used).toFixed(2)}{" "}
@@ -348,9 +421,35 @@ export function ProformaInvoicePDF({
                   )
                 </>
               )}
-              .{"\n"}* Indicative only. Final INR amount and GST (18%) are
-              calculated at the live forex rate on the date of payment,
-              determined per CGST Rule 34(2) (GAAP, export of service).
+            </Text>
+            {gstEst && gstEst.gstType === "IGST" && (
+              <Text style={{ fontSize: 9, color: "#3A5A94", marginTop: 2 }}>
+                + IGST @ {gstEst.igstPercent}%: {fmtINR(gstEst.igstAmount)}
+              </Text>
+            )}
+            {gstEst && gstEst.gstType === "CGST_SGST" && (
+              <Text style={{ fontSize: 9, color: "#3A5A94", marginTop: 2 }}>
+                + CGST @ {gstEst.cgstPercent}%: {fmtINR(gstEst.cgstAmount)} ·
+                SGST @ {gstEst.sgstPercent}%: {fmtINR(gstEst.sgstAmount)}
+              </Text>
+            )}
+            {gstEst && (
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#0B2B5C",
+                  marginTop: 3,
+                }}
+              >
+                = Indicative total (incl. GST):{" "}
+                {fmtINR(gstEst.totalAmountINR)}
+              </Text>
+            )}
+            <Text style={{ fontSize: 9, color: "#3A5A94", marginTop: 3 }}>
+              * Indicative only. Final INR amount and GST are locked at the
+              live forex rate on the date of payment, determined per CGST
+              Rule 34(2) (GAAP).
             </Text>
           </View>
         )}

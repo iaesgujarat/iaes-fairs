@@ -62,6 +62,7 @@ export function InvoiceActions({
               registration={registration}
               invoice={invoice}
               fair={fair}
+              billing={billing}
               itinerary={itinerary}
             />
           ) : (

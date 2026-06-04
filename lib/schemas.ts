@@ -151,9 +151,39 @@ export const step3Schema = z
       pan_number: z.string().optional(),
       is_gst_registered: z.boolean().optional(),
       gstin: z.string().optional(),
+      // v19 — Mode A "Attn:" recipient (USD / university pays directly).
+      // Legal entity stays the university; this only re-addresses the
+      // document. bill_to_self=false means "address it to someone else".
+      bill_to_self: z.boolean().optional(),
+      bill_to_attn_name: z.string().max(120).optional(),
+      bill_to_attn_title: z.string().max(120).optional(),
+      bill_to_attn_email: z
+        .email("Enter a valid email for the invoice recipient.")
+        .optional()
+        .or(z.literal("")),
+      bill_to_cc: z.boolean().optional(),
     })
   )
   .superRefine((val, ctx) => {
+    // v19 — USD path: if addressing the invoice to someone else, the
+    // recipient name + a valid email are required.
+    if (val.payment_currency === "USD" && val.bill_to_self === false) {
+      if (!val.bill_to_attn_name || val.bill_to_attn_name.trim().length < 2) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["bill_to_attn_name"],
+          message: "Enter the name this invoice should be addressed to.",
+        });
+      }
+      if (!val.bill_to_attn_email) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["bill_to_attn_email"],
+          message: "Enter the recipient's email address.",
+        });
+      }
+    }
+
     if (val.payment_currency !== "INR") return;
 
     const billing = {

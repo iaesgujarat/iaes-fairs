@@ -11,6 +11,8 @@ interface Props {
   totalAmountINR: number | null;
   dueDate?: string | null;
   payUrl: string;
+  /** v19 — Mode A: invoice addressed to someone else at the university. */
+  addressedTo?: string | null;
 }
 
 function formatINR(amount: number): string {
@@ -39,6 +41,7 @@ export function InvoiceEmail({
   totalAmountINR,
   dueDate,
   payUrl,
+  addressedTo,
 }: Props) {
   const isINR = paymentCurrency === "INR";
   const amountLabel = isINR
@@ -98,6 +101,12 @@ export function InvoiceEmail({
                 Thank you for registering <strong>{universityName}</strong> for
                 the {fairName}. Please find your invoice details below.
               </p>
+              {addressedTo && (
+                <p style={{ marginTop: 10, fontSize: 13, color: "#6F7B8F" }}>
+                  As requested, this invoice is addressed to{" "}
+                  <strong>{addressedTo}</strong>.
+                </p>
+              )}
 
               <table
                 width="100%"

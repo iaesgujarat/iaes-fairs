@@ -1,6 +1,7 @@
 import { formatUSD, formatDateShort } from "@/lib/utils";
 import type { Registration, Invoice, Fair } from "@/types";
 import { BankDetailsHTML } from "./BankDetailsHTML";
+import { getAttnRecipient } from "@/lib/billTo";
 import { IAES_LOGO_PATH, IAES_LOGO_ALT } from "@/lib/brand";
 
 interface Props {
@@ -27,6 +28,9 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
   const extraRepUSD = Number(fair.price_extra_rep_usd ?? 100);
   const tierLabel =
     registration.pricing_tier === "EARLYBIRD" ? "Early Bird" : "Standard";
+  // v19 — Mode A: invoice addressed to a different person at the
+  // university (legal entity unchanged).
+  const attn = getAttnRecipient(registration);
 
   return (
     <div className="space-y-8">
@@ -68,11 +72,25 @@ export function InvoiceUSD({ registration, invoice, fair }: Props) {
           <p className="mt-2 font-medium text-navy">
             {registration.university_name}
           </p>
-          <p className="text-sm text-navy/70">{registration.contact_name}</p>
-          {registration.contact_title && (
-            <p className="text-sm text-navy/70">{registration.contact_title}</p>
+          {attn ? (
+            <>
+              <p className="text-sm text-navy/70">Attn: {attn.name}</p>
+              {attn.title && (
+                <p className="text-sm text-navy/70">{attn.title}</p>
+              )}
+              <p className="text-sm text-navy/70">{attn.email}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-navy/70">{registration.contact_name}</p>
+              {registration.contact_title && (
+                <p className="text-sm text-navy/70">
+                  {registration.contact_title}
+                </p>
+              )}
+              <p className="text-sm text-navy/70">{registration.contact_email}</p>
+            </>
           )}
-          <p className="text-sm text-navy/70">{registration.contact_email}</p>
           <p className="text-sm text-navy/70">{registration.university_country}</p>
         </div>
       </div>

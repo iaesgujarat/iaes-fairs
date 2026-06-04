@@ -3,7 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InvoiceEmail } from "@/emails/InvoiceEmail";
-import type { Fair, Currency } from "@/types";
+import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import { getAttnRecipient, billingCc } from "@/lib/billTo";
+import type {
+  Fair,
+  Currency,
+  Registration,
+  Invoice,
+  BillingDetails,
+} from "@/types";
 
 export const runtime = "nodejs";
 
@@ -41,7 +49,7 @@ export async function POST(
   const supabase = createAdminClient();
   const { data: reg } = await supabase
     .from("registrations")
-    .select(`*, fair:fairs(*), invoice:invoices(*)`)
+    .select(`*, fair:fairs(*), invoice:invoices(*), billing:billing_details(*)`)
     .eq("id", params.id)
     .maybeSingle();
 
@@ -49,8 +57,13 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const invoice = Array.isArray(reg.invoice) ? reg.invoice[0] : reg.invoice;
+  const invoice = (
+    Array.isArray(reg.invoice) ? reg.invoice[0] : reg.invoice
+  ) as Invoice;
   const fair = reg.fair as Fair;
+  const billing = (Array.isArray(reg.billing)
+    ? reg.billing[0]
+    : reg.billing) as BillingDetails | null;
   if (!invoice || !fair) {
     return NextResponse.json(
       { error: "Missing invoice or fair." },
@@ -63,16 +76,26 @@ export async function POST(
     "https://fairs.iaesgujarat.org";
   const payUrl = `${appUrl}/payment/${reg.id}`;
 
+  const pdf = await renderInvoiceAttachment(supabase, {
+    registration: reg as Registration,
+    invoice,
+    fair,
+    billing,
+  });
+  const cc = billingCc(reg as Registration, reg.contact_email);
+
   const resend = getResend();
   await resend.emails.send({
     from: FROM_EMAIL,
     to: reg.contact_email,
+    cc: cc ? [cc] : undefined,
+    attachments: pdf ? [pdf] : undefined,
     subject: `Reminder: Invoice for ${fair.name} — ${reg.university_name}`,
     react: InvoiceEmail({
       contactName: reg.contact_name,
       universityName: reg.university_name,
       fairName: fair.name,
-      invoiceNumber: invoice.invoice_number,
+      invoiceNumber: invoice.invoice_number ?? "",
       paymentCurrency: invoice.payment_currency as Currency,
       totalAmountUSD: invoice.total_amount_usd
         ? Number(invoice.total_amount_usd)
@@ -82,6 +105,7 @@ export async function POST(
         : null,
       dueDate: fair.registration_deadline,
       payUrl,
+      addressedTo: getAttnRecipient(reg as Registration)?.name ?? null,
     }),
   });
 

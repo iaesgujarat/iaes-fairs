@@ -1,5 +1,3 @@
-"use client";
-
 import { Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { FairItineraryStop } from "@/types";
 import { formatDateShort } from "@/lib/utils";

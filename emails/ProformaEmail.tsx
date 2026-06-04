@@ -20,6 +20,9 @@ interface Props {
   addonRepsCostUSD: number;
   tierLabel: "Early Bird" | "Standard";
   totalUSD: number;
+  /** v19 — when the registrant asked us to address the invoice to
+   *  someone else (Mode A). Shown as a note; null = addressed to self. */
+  addressedTo?: string | null;
 }
 
 function fmtUSD(n: number): string {
@@ -55,6 +58,7 @@ export function ProformaEmail({
   addonRepsCostUSD,
   tierLabel,
   totalUSD,
+  addressedTo,
 }: Props) {
   return (
     <MailerLayout
@@ -67,6 +71,12 @@ export function ProformaEmail({
         Thank you for registering <strong>{universityName}</strong> for the{" "}
         {fairName}. Your registration is confirmed. Payment will open shortly.
       </p>
+      {addressedTo && (
+        <p style={{ marginTop: 10, fontSize: 13, color: "#6F7B8F" }}>
+          As requested, the attached Proforma is addressed to{" "}
+          <strong>{addressedTo}</strong>.
+        </p>
+      )}
 
       <div
         style={{

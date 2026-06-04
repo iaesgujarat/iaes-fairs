@@ -74,6 +74,8 @@ export function RegistrationForm({
       payment_currency: "USD",
       is_gst_registered: false,
       terms_accepted: false,
+      bill_to_self: true,
+      bill_to_cc: true,
     },
     mode: "onTouched",
   });
@@ -81,6 +83,7 @@ export function RegistrationForm({
   const currency = watch("payment_currency");
   const state = watch("state");
   const isGSTRegistered = watch("is_gst_registered");
+  const billToSelf = watch("bill_to_self");
   const totalTables = watch("total_tables") ?? 1;
   const totalReps = watch("total_reps") ?? 2;
 
@@ -518,6 +521,7 @@ export function RegistrationForm({
           currency={currency}
           state={state ?? null}
           isGSTRegistered={!!isGSTRegistered}
+          billToSelf={billToSelf !== false}
           setValue={setValue}
           fair={fair}
           boothPriceUSD={effectiveBoothUSD}
@@ -544,6 +548,7 @@ function Step3Payment({
   currency,
   state,
   isGSTRegistered,
+  billToSelf,
   setValue,
   fair,
   boothPriceUSD,
@@ -557,6 +562,7 @@ function Step3Payment({
   currency: "USD" | "INR" | undefined;
   state: string | null;
   isGSTRegistered: boolean;
+  billToSelf: boolean;
   setValue: RHFSetValue;
   fair: Fair;
   /** Effective amount billed in USD — premium flat fee, or base +
@@ -614,12 +620,15 @@ function Step3Payment({
     <div className="space-y-6">
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-navy">
-          How would you like to pay? <span className="text-gold-500">*</span>
+          How will this registration be paid?{" "}
+          <span className="text-gold-500">*</span>
         </legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="cursor-pointer rounded-md border border-navy/15 bg-white p-4 transition-colors has-[input:checked]:border-navy has-[input:checked]:bg-navy/[0.03]">
             <div className="flex items-start justify-between">
-              <span className="font-medium text-navy">Pay in USD</span>
+              <span className="font-medium text-navy">
+                The university pays directly
+              </span>
               <input
                 type="radio"
                 value="USD"
@@ -628,7 +637,7 @@ function Step3Payment({
               />
             </div>
             <p className="mt-1 text-xs text-navy/60">
-              Recommended for US offices. No GST applicable (export of service).
+              Paid to us in USD. No GST (export of service).
             </p>
             <p className="mt-2 text-sm font-semibold text-navy">
               {isPrem && (
@@ -641,7 +650,9 @@ function Step3Payment({
           </label>
           <label className="cursor-pointer rounded-md border border-navy/15 bg-white p-4 transition-colors has-[input:checked]:border-navy has-[input:checked]:bg-navy/[0.03]">
             <div className="flex items-start justify-between">
-              <span className="font-medium text-navy">Pay in INR</span>
+              <span className="font-medium text-navy">
+                An India office handles payment
+              </span>
               <input
                 type="radio"
                 value="INR"
@@ -650,7 +661,8 @@ function Step3Payment({
               />
             </div>
             <p className="mt-1 text-xs text-navy/60">
-              For India-based offices. GST applicable as per Indian tax law.
+              Paid in INR by an India-based office/partner (e.g. your managed-
+              services office). GST applies as per Indian tax law.
             </p>
             <p className="mt-2 text-sm font-semibold text-navy">
               {isPrem && (
@@ -671,6 +683,67 @@ function Step3Payment({
           </p>
         )}
       </fieldset>
+
+      {currency === "USD" && (
+        <div className="rounded-md border border-navy/10 bg-cream/40 p-5">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-navy"
+              checked={!billToSelf}
+              onChange={(e) =>
+                setValue("bill_to_self", !e.target.checked, {
+                  shouldValidate: true,
+                })
+              }
+            />
+            <span className="text-sm leading-snug text-navy/85">
+              Address the Proforma &amp; Invoice to someone else
+              <span className="block text-xs text-navy/55">
+                e.g. your finance office or a university official. The invoice
+                stays in the university&rsquo;s name — we just add an
+                &ldquo;Attn:&rdquo; line and can email them a copy.
+              </span>
+            </span>
+          </label>
+
+          {!billToSelf && (
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Recipient Name"
+                  required
+                  placeholder="Dr. Jane Smith"
+                  error={errors.bill_to_attn_name?.message}
+                  {...register("bill_to_attn_name")}
+                />
+                <Input
+                  label="Title / Department"
+                  placeholder="Director, Finance Office"
+                  error={errors.bill_to_attn_title?.message}
+                  {...register("bill_to_attn_title")}
+                />
+              </div>
+              <Input
+                type="email"
+                label="Recipient Email"
+                required
+                placeholder="finance@university.edu"
+                error={errors.bill_to_attn_email?.message}
+                {...register("bill_to_attn_email")}
+              />
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm text-navy/85">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-navy"
+                  {...register("bill_to_cc")}
+                />
+                Also email a copy of the Proforma / Invoice to this recipient.
+              </label>
+            </div>
+          )}
+        </div>
+      )}
 
       {currency === "INR" && (
         <>
