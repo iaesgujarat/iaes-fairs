@@ -41,7 +41,7 @@ export default async function AdminRegistrationPage({
        backdrop_received, backdrop_received_at, backdrop_png_url,
        logo_reminder_sent_at, created_at,
        fair:fairs(name, premium_deadline, price_premium_usd),
-       invoices(proforma_reference, total_amount_usd),
+       invoices(proforma_reference, total_amount_usd, status, invoice_type),
        billing:billing_details(*)`
     )
     .eq("id", params.id)
@@ -56,8 +56,18 @@ export default async function AdminRegistrationPage({
     : reg.billing) as BillingDetails | null;
   const isPremium = reg.pricing_tier === "PREMIUM";
 
-  // v19 — billing recipient state for the admin controls.
-  const isLocked = reg.status === "paid" || reg.status === "confirmed";
+  // v19/v22 — billing recipient state for the admin controls. Locked
+  // ONLY once money is actually received (a paid TAX invoice). A bare
+  // "confirmed" (an admin can soft-confirm to hold a spot before
+  // payment) keeps the recipient editable.
+  const invoiceRows = (Array.isArray(reg.invoices) ? reg.invoices : []) as Array<{
+    invoice_type?: string;
+    status?: string;
+  }>;
+  const hasPaidTaxInvoice = invoiceRows.some(
+    (i) => i.invoice_type === "TAX" && i.status === "paid"
+  );
+  const isLocked = reg.status === "paid" || hasPaidTaxInvoice;
   const currentMode: "university" | "india_office" =
     reg.payment_currency === "INR" && billing ? "india_office" : "university";
   const attn = reg.bill_to_attn_name

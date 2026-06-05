@@ -89,11 +89,27 @@ export async function PATCH(
   if (!reg) {
     return NextResponse.json({ error: "Registration not found." }, { status: 404 });
   }
-  if (reg.status === "paid" || reg.status === "confirmed") {
+
+  // All invoices for this registration, newest first.
+  const { data: invoicesRaw } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("registration_id", params.id)
+    .order("issued_at", { ascending: false });
+  const invoices = (invoicesRaw as Invoice[] | null) ?? [];
+
+  // Lock the billed party ONLY once money has actually been received —
+  // i.e. a TAX invoice is paid. A bare "confirmed" status does NOT lock
+  // billing: an admin can soft-confirm to hold a spot BEFORE payment,
+  // and the recipient must stay editable until real payment lands.
+  const hasPaidTaxInvoice = invoices.some(
+    (i) => i.invoice_type === "TAX" && i.status === "paid"
+  );
+  if (reg.status === "paid" || hasPaidTaxInvoice) {
     return NextResponse.json(
       {
         error:
-          "This registration is already paid — the tax invoice is locked and the billed party can no longer be changed.",
+          "This registration is paid — the tax invoice is locked and the billed party can no longer be changed.",
       },
       { status: 409 }
     );
@@ -101,12 +117,6 @@ export async function PATCH(
 
   // The single active (unpaid) invoice — proforma (gateway off) or an
   // unpaid tax invoice (gateway on). Either way, not yet paid.
-  const { data: invoicesRaw } = await supabase
-    .from("invoices")
-    .select("*")
-    .eq("registration_id", params.id)
-    .order("issued_at", { ascending: false });
-  const invoices = (invoicesRaw as Invoice[] | null) ?? [];
   const active =
     invoices.find((i) => i.invoice_type === "TAX") ??
     invoices.find((i) => i.invoice_type === "PROFORMA") ??
