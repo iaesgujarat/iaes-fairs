@@ -17,6 +17,12 @@ import {
 import { registrationSchema, TERMS_VERSION } from "@/lib/schemas";
 import { formatFairDateRange } from "@/lib/mailerHelpers";
 import { sendAdminNotification } from "@/lib/adminNotify";
+import {
+  registerWhatsAppContact,
+  sendWhatsAppTemplate,
+  WA_TEMPLATES,
+} from "@/lib/whatsappNotify";
+import { toE164 } from "@/lib/phoneE164";
 import { renderInvoiceAttachment } from "@/lib/invoicePdf";
 import type {
   Fair,
@@ -245,6 +251,10 @@ export async function POST(req: Request) {
       contact_title: input.contact_title || null,
       contact_email: input.contact_email,
       contact_phone: input.contact_phone || null,
+      whatsapp_consent: !!input.whatsapp_consent,
+      // International reps -> no default CC; a bare number stays null and
+      // simply isn't WhatsApp'd (email still goes out).
+      whatsapp_phone_e164: toE164(input.contact_phone || null),
       booth_type: boothTypeValue,
       number_of_reps: totalReps,
       total_tables: totalTables,
@@ -273,6 +283,26 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  // ---- 1a. WhatsApp: register the rep for this + future fairs
+  // (consented only) and send a "you're registered" note (dark until
+  // WHATSAPP_ENABLED). No default CC — intl reps must supply a country
+  // code; bare numbers are skipped, email already covers them.
+  await registerWhatsAppContact(supabase, {
+    rawPhone: input.contact_phone,
+    name: input.contact_name,
+    audience: "university",
+    country: input.university_country,
+    fairId: input.fair_id,
+    consent: !!input.whatsapp_consent,
+  });
+  await sendWhatsAppTemplate(supabase, {
+    fairId: input.fair_id,
+    rawPhone: input.contact_phone,
+    template: WA_TEMPLATES.UNIVERSITY_REGISTERED,
+    context: "university_registered",
+    bodyParams: [input.contact_name, input.university_name, f.name],
+  });
 
   // ---- 1b. Event opt-ins (v15) — best-effort, never fail the
   // registration over attendance-planning data. Only persist ids

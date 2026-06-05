@@ -3,6 +3,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InstitutionConfirmationEmail } from "@/emails/InstitutionConfirmationEmail";
 import { institutionRegistrationSchema } from "@/lib/schemas";
+import {
+  registerWhatsAppContact,
+  sendWhatsAppTemplate,
+  WA_TEMPLATES,
+} from "@/lib/whatsappNotify";
 import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
@@ -143,6 +148,27 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("Institution confirmation email failed:", e);
   }
+
+  // WhatsApp: register the contact for this + future fairs (consented
+  // only) and send confirmation (dark until WHATSAPP_ENABLED). Campus
+  // hosts are India-based -> default CC "IN".
+  await registerWhatsAppContact(supabase, {
+    rawPhone: input.phone,
+    defaultCc: "IN",
+    name: input.contact_name,
+    audience: "institution",
+    country: input.state,
+    fairId: input.fair_id,
+    consent: !!input.whatsapp_consent,
+  });
+  await sendWhatsAppTemplate(supabase, {
+    fairId: input.fair_id,
+    rawPhone: input.phone,
+    defaultCc: "IN",
+    template: WA_TEMPLATES.INSTITUTION_CONFIRMATION,
+    context: "institution_confirmation",
+    bodyParams: [input.contact_name, f.name, formatRange(f)],
+  });
 
   return NextResponse.json({ registrationId: registration.id });
 }

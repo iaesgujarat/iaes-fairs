@@ -215,6 +215,10 @@ export const step3Schema = z
 export const registrationSchema = z
   .object({
     fair_id: z.uuid({ error: "Missing fair selection." }),
+    // Optional WhatsApp opt-in. The registration form's checkbox is a
+    // fast-follow; the server persists + acts on this the moment the
+    // form starts sending it. Absent -> treated as no consent.
+    whatsapp_consent: z.boolean().optional(),
   })
   .and(step1Schema)
   .and(step2Schema)

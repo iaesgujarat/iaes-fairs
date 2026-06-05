@@ -4,6 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { StudentPassEmail } from "@/emails/StudentPassEmail";
 import { studentPassSchema } from "@/lib/schemas";
+import {
+  registerWhatsAppContact,
+  sendWhatsAppTemplate,
+  WA_TEMPLATES,
+} from "@/lib/whatsappNotify";
 import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
@@ -129,6 +134,24 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Resend pass email failed:", e);
     }
+    // WhatsApp: keep the registry fresh + resend the pass (dark until
+    // WHATSAPP_ENABLED). Students are India-based -> default CC "IN".
+    await registerWhatsAppContact(supabase, {
+      rawPhone: input.phone,
+      defaultCc: "IN",
+      name: existing.full_name,
+      audience: "student",
+      fairId: input.fair_id,
+      consent: !!input.whatsapp_consent,
+    });
+    await sendWhatsAppTemplate(supabase, {
+      fairId: input.fair_id,
+      rawPhone: input.phone,
+      defaultCc: "IN",
+      template: WA_TEMPLATES.STUDENT_PASS,
+      context: "student_pass",
+      bodyParams: [existing.full_name, f.name, formatRange(f)],
+    });
     return NextResponse.json({
       alreadyRegistered: true,
       passUuid: existing.pass_uuid,
@@ -176,6 +199,25 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("Student pass email failed:", e);
   }
+
+  // WhatsApp: register the number for this + future fairs (consented
+  // only) and send the pass (dark until WHATSAPP_ENABLED).
+  await registerWhatsAppContact(supabase, {
+    rawPhone: input.phone,
+    defaultCc: "IN",
+    name: input.full_name,
+    audience: "student",
+    fairId: input.fair_id,
+    consent: !!input.whatsapp_consent,
+  });
+  await sendWhatsAppTemplate(supabase, {
+    fairId: input.fair_id,
+    rawPhone: input.phone,
+    defaultCc: "IN",
+    template: WA_TEMPLATES.STUDENT_PASS,
+    context: "student_pass",
+    bodyParams: [input.full_name, f.name, formatRange(f)],
+  });
 
   return NextResponse.json({
     passUuid: pass.pass_uuid,

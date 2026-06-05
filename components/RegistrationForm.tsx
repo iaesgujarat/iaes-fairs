@@ -416,6 +416,24 @@ export function RegistrationForm({
             {...register("special_requests")}
           />
 
+          {/* WhatsApp opt-in — only acted on when a country code is given */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-navy/10 bg-[#F5F7FA] p-4">
+            <input
+              type="checkbox"
+              {...register("whatsapp_consent")}
+              className="mt-0.5 h-4 w-4 accent-navy"
+            />
+            <span className="text-sm leading-snug text-navy/85">
+              Send me WhatsApp updates about this and future IAES fairs
+              <span className="mt-0.5 block text-xs text-navy/55">
+                Registration confirmation, schedule updates, and notices about
+                future fairs. Make sure your phone number above includes its
+                country code. Reply STOP anytime to opt out. Email updates are
+                sent regardless.
+              </span>
+            </span>
+          </label>
+
           {/* Terms & Conditions acceptance */}
           <div className="rounded-xl border border-navy/10 bg-[#F5F7FA] p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-navy">

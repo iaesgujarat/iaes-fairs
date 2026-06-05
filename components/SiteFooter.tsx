@@ -60,12 +60,26 @@ export function SiteFooter() {
             &copy; {new Date().getFullYear()} Indo American Education Society.
             All rights reserved. &middot; fairs.iaesgujarat.org
           </span>
-          <Link
-            href="/terms"
-            className="text-navy/60 hover:text-navy hover:underline"
-          >
-            Terms &amp; Conditions
-          </Link>
+          <span className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link
+              href="/privacy"
+              className="text-navy/60 hover:text-navy hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/data-deletion"
+              className="text-navy/60 hover:text-navy hover:underline"
+            >
+              Data Deletion
+            </Link>
+            <Link
+              href="/terms"
+              className="text-navy/60 hover:text-navy hover:underline"
+            >
+              Terms &amp; Conditions
+            </Link>
+          </span>
         </div>
       </div>
     </footer>
