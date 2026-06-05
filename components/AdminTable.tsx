@@ -73,12 +73,17 @@ export function AdminTable({ rows }: { rows: Row[] }) {
   const [tierFilter, setTierFilter] = useState<
     "all" | "EARLYBIRD" | "STANDARD" | "PREMIUM" | "LOGO_PENDING"
   >("all");
+  const [currencyFilter, setCurrencyFilter] = useState<"all" | "USD" | "INR">(
+    "all"
+  );
   const [updating, setUpdating] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (currencyFilter !== "all" && r.payment_currency !== currencyFilter)
+        return false;
       if (tierFilter !== "all") {
         if (tierFilter === "LOGO_PENDING") {
           if (!(r.pricing_tier === "PREMIUM" && !r.backdrop_received))
@@ -95,7 +100,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
         (r.invoices?.[0]?.invoice_number || "").toLowerCase().includes(q)
       );
     });
-  }, [rows, query, statusFilter, tierFilter]);
+  }, [rows, query, statusFilter, tierFilter, currencyFilter]);
 
   async function markConfirmed(registrationId: string) {
     setUpdating(registrationId);
@@ -175,6 +180,17 @@ export function AdminTable({ rows }: { rows: Row[] }) {
           <option value="STANDARD">Standard</option>
           <option value="PREMIUM">Premium</option>
           <option value="LOGO_PENDING">⏳ Logo pending</option>
+        </select>
+        <select
+          className="rounded-md border border-navy/15 bg-white px-3 py-2.5 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
+          value={currencyFilter}
+          onChange={(e) =>
+            setCurrencyFilter(e.target.value as "all" | "USD" | "INR")
+          }
+        >
+          <option value="all">All currencies</option>
+          <option value="USD">USD ($)</option>
+          <option value="INR">INR (₹)</option>
         </select>
       </div>
 
