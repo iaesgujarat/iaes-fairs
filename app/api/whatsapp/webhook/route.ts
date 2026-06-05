@@ -55,6 +55,7 @@ interface WAStatus {
   id?: string;
   recipient_id?: string;
   status?: string;
+  errors?: Array<{ code?: number; title?: string; message?: string }>;
 }
 interface WAMessage {
   id?: string;
@@ -108,9 +109,21 @@ export async function POST(req: Request) {
             raw: status,
           });
           if (status.id && status.status) {
+            // On a 'failed' callback Meta includes an errors[] with the
+            // real reason (e.g. 131042 "Business eligibility payment
+            // issue"). Capture it onto the send row so the audit table is
+            // self-contained — no digging in whatsapp_inbound.raw. Only
+            // written when present, so delivered/read never clobber it.
+            const err = status.errors?.[0];
+            const errText = err
+              ? `${err.code ?? ""} ${err.title ?? err.message ?? ""}`.trim()
+              : null;
             await supabase
               .from("whatsapp_sends")
-              .update({ status: status.status })
+              .update({
+                status: status.status,
+                ...(errText ? { error: errText.slice(0, 500) } : {}),
+              })
               .eq("wa_message_id", status.id);
           }
         }
