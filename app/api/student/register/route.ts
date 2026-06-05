@@ -151,6 +151,7 @@ export async function POST(req: Request) {
       template: WA_TEMPLATES.STUDENT_PASS,
       context: "student_pass",
       bodyParams: [existing.full_name, f.name, formatRange(f)],
+      urlButtonParam: existing.pass_uuid,
     });
     return NextResponse.json({
       alreadyRegistered: true,
@@ -217,6 +218,7 @@ export async function POST(req: Request) {
     template: WA_TEMPLATES.STUDENT_PASS,
     context: "student_pass",
     bodyParams: [input.full_name, f.name, formatRange(f)],
+    urlButtonParam: pass.pass_uuid,
   });
 
   return NextResponse.json({

@@ -42,7 +42,15 @@ export interface SendTemplateArgs {
   languageCode?: string;
   /** Positional body variables -> {{1}}, {{2}}, ... in template order. */
   bodyParams?: string[];
-  /** Full component override (header media, buttons) when bodyParams is insufficient. */
+  /**
+   * Suffix value for a single DYNAMIC URL button (button index 0). The
+   * template's button URL must be defined with a trailing {{1}} (e.g.
+   * https://fairs.iaesgujarat.org/pass/{{1}}); this is the value that
+   * replaces it. Only send this when the approved template HAS such a
+   * button, or Meta rejects the send for a component mismatch.
+   */
+  urlButtonParam?: string;
+  /** Full component override (header media, buttons) when the above is insufficient. */
   components?: TemplateComponent[];
 }
 
@@ -66,19 +74,25 @@ export async function sendTemplate(
   const token = process.env.WHATSAPP_ACCESS_TOKEN!;
   const to = args.to.replace(/^\+/, "");
 
-  const components =
-    args.components ??
-    (args.bodyParams && args.bodyParams.length > 0
-      ? [
-          {
-            type: "body" as const,
-            parameters: args.bodyParams.map((text) => ({
-              type: "text",
-              text,
-            })),
-          },
-        ]
-      : undefined);
+  let components = args.components;
+  if (!components) {
+    const built: TemplateComponent[] = [];
+    if (args.bodyParams && args.bodyParams.length > 0) {
+      built.push({
+        type: "body",
+        parameters: args.bodyParams.map((text) => ({ type: "text", text })),
+      });
+    }
+    if (args.urlButtonParam) {
+      built.push({
+        type: "button",
+        sub_type: "url",
+        index: "0",
+        parameters: [{ type: "text", text: args.urlButtonParam }],
+      });
+    }
+    components = built.length > 0 ? built : undefined;
+  }
 
   const payload = {
     messaging_product: "whatsapp",

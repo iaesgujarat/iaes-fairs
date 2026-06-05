@@ -108,6 +108,8 @@ export async function sendWhatsAppTemplate(
     template: string;
     context: string;
     bodyParams?: string[];
+    /** Suffix value for a dynamic URL button (see SendTemplateArgs.urlButtonParam). */
+    urlButtonParam?: string;
     components?: TemplateComponent[];
   }
 ): Promise<void> {
@@ -138,6 +140,7 @@ export async function sendWhatsAppTemplate(
       to,
       template: args.template,
       bodyParams: args.bodyParams,
+      urlButtonParam: args.urlButtonParam,
       components: args.components,
     });
     if (logId) {
