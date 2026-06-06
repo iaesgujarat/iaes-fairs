@@ -431,12 +431,22 @@ function Th({ children }: { children: React.ReactNode }) {
 // powers the post-fair Finance MIS), then finalize → TAX invoice +
 // confirmation email + WhatsApp via /confirm-payment.
 // ----------------------------------------------------------------
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
   const invoice = row.invoices?.[0];
-  const invoiceTotal = invoice ? formatInvoiceTotal(invoice) : "—";
+  const isINR = row.payment_currency === "INR";
+  const defaultTotal = isINR
+    ? invoice?.total_amount_inr
+    : invoice?.total_amount_usd;
+
   const [form, setForm] = useState({
+    invoice_total: defaultTotal ? String(defaultTotal) : "",
+    gst_type: (invoice?.gst_type === "CGST_SGST"
+      ? "CGST_SGST"
+      : "IGST") as "IGST" | "CGST_SGST",
     bank_credit_date: "",
-    amount_credited_inr: "",
+    amount_credited_inr: isINR && defaultTotal ? String(defaultTotal) : "",
     payment_method: "Bank transfer",
     reference_number: "",
     remitter_name: "",
@@ -448,6 +458,25 @@ function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
   const set = (k: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  // Live GST back-out preview (INR only) so the admin sees exactly what
+  // the tax invoice will say before confirming.
+  const total = Number(form.invoice_total);
+  const breakdown =
+    isINR && Number.isFinite(total) && total > 0
+      ? (() => {
+          const gst = round2((total * 18) / 118);
+          const basic = round2(total - gst);
+          if (form.gst_type === "CGST_SGST") {
+            const cgst = round2(gst / 2);
+            return { basic, lines: [
+              ["CGST 9%", round2(cgst)],
+              ["SGST 9%", round2(gst - cgst)],
+            ] as [string, number][] };
+          }
+          return { basic, lines: [["IGST 18%", gst]] as [string, number][] };
+        })()
+      : null;
+
   async function submit() {
     setBusy(true);
     setErr(null);
@@ -458,6 +487,8 @@ function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            invoice_total: form.invoice_total,
+            gst_type: form.gst_type,
             bank_credit_date: form.bank_credit_date,
             amount_credited_inr: form.amount_credited_inr,
             payment_method: form.payment_method,
@@ -484,13 +515,70 @@ function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
             Record payment — {row.university_name}
           </p>
           <p className="mt-0.5 text-xs text-navy/55">
-            Invoice amount: <strong>{invoiceTotal}</strong>. This confirms the
-            booking, issues the tax invoice, and emails the rep. Capture the
-            actual bank credit for your books / MIS.
+            Enter the amount actually agreed/received. This issues the tax
+            invoice <strong>for that amount</strong>, confirms the booking, and
+            emails the rep.{" "}
+            {isINR
+              ? "GST is backed out of the inclusive total."
+              : "USD export — no GST."}
           </p>
         </div>
         <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              type="number"
+              label={
+                isINR
+                  ? "Invoice total, incl. GST (INR) *"
+                  : "Invoice total (USD) *"
+              }
+              placeholder={isINR ? "e.g. 118000" : "e.g. 1500"}
+              value={form.invoice_total}
+              onChange={(e) => set("invoice_total")(e.target.value)}
+            />
+            {isINR && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-navy">
+                  GST type *
+                </label>
+                <select
+                  className="w-full rounded-md border border-navy/15 bg-white px-3 py-2.5 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
+                  value={form.gst_type}
+                  onChange={(e) => set("gst_type")(e.target.value)}
+                >
+                  <option value="IGST">Inter-state — IGST 18%</option>
+                  <option value="CGST_SGST">
+                    Intra-Gujarat — CGST 9% + SGST 9%
+                  </option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {breakdown && (
+            <div className="mt-3 rounded-md border border-navy/10 bg-cream/50 p-3 text-xs">
+              <div className="flex justify-between py-0.5">
+                <span className="text-navy/60">Taxable (basic)</span>
+                <span className="font-medium text-navy">
+                  {formatINR(breakdown.basic)}
+                </span>
+              </div>
+              {breakdown.lines.map(([label, amt]) => (
+                <div key={label} className="flex justify-between py-0.5">
+                  <span className="text-navy/60">{label}</span>
+                  <span className="font-medium text-navy">{formatINR(amt)}</span>
+                </div>
+              ))}
+              <div className="mt-1 flex justify-between border-t border-navy/10 pt-1">
+                <span className="font-semibold text-navy">Invoice total</span>
+                <span className="font-semibold text-navy">
+                  {formatINR(total)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Input
               type="date"
               label="Bank credit date *"
@@ -499,7 +587,7 @@ function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
             />
             <Input
               type="number"
-              label="Amount credited (INR) *"
+              label="Amount actually credited to bank (INR) *"
               placeholder="e.g. 124500"
               value={form.amount_credited_inr}
               onChange={(e) => set("amount_credited_inr")(e.target.value)}

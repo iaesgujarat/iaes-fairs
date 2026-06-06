@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateGST } from "@/lib/gst";
-import { getLiveForexRate } from "@/lib/forex";
 import { processSuccessfulPayment } from "@/lib/processPayment";
 import type { Currency, Invoice } from "@/types";
 
 export const runtime = "nodejs";
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 async function assertAdmin() {
   const supabase = createClient();
@@ -24,13 +24,24 @@ async function assertAdmin() {
 }
 
 /**
- * v22 — HARD CONFIRM (manual / offline payment). The admin records a
- * received payment; we capture the bank-reconciliation details, snapshot
- * final forex+GST onto the proforma (so the INR is accurate as of today,
- * not the indicative figure), insert a 'manual' payments row, then reuse
- * processSuccessfulPayment() — the SAME finalize logic Razorpay uses —
- * to mint the TAX invoice, mark paid, set 'confirmed', and email the
- * confirmation + itinerary. Idempotent via processSuccessfulPayment.
+ * v22 (2A.1) — HARD CONFIRM (manual / offline payment).
+ *
+ * Offline era: the admin records the payment ACTUALLY agreed/received
+ * and we issue the tax invoice to match it exactly (so invoice ⇔ bank).
+ *
+ *   USD (export of service): invoice_total = the USD amount. No GST.
+ *   INR (domestic): invoice_total = the TOTAL INR *inclusive of GST*.
+ *     We BACK OUT 18% GST — basic = total − gst, gst = total·18/118 —
+ *     and split it by the admin-chosen gst_type:
+ *       CGST_SGST → 9% + 9% (intra-Gujarat)
+ *       IGST      → 18%      (inter-state)
+ *     forex_rate_used is the implied base_inr / base_usd so the invoice
+ *     reconciles.
+ *
+ * We snapshot these onto the proforma, then reuse processSuccessfulPayment
+ * (the same finalize Razorpay uses) to mint the TAX invoice, confirm, and
+ * email the confirmation + itinerary. amount_credited_inr captures the
+ * ACTUAL bank realisation for books / Finance MIS.
  */
 export async function POST(
   req: Request,
@@ -42,6 +53,8 @@ export async function POST(
   }
 
   let body: {
+    invoice_total?: number | string;
+    gst_type?: "IGST" | "CGST_SGST";
     bank_credit_date?: string;
     reference_number?: string;
     amount_credited_inr?: number | string;
@@ -55,18 +68,26 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const bankCreditDate = body.bank_credit_date?.trim();
+  const invoiceTotal = Number(body.invoice_total);
   const amountCreditedINR = Number(body.amount_credited_inr);
+  const bankCreditDate = body.bank_credit_date?.trim();
   const paymentMethod = body.payment_method?.trim();
-  if (!bankCreditDate) {
+
+  if (!Number.isFinite(invoiceTotal) || invoiceTotal <= 0) {
     return NextResponse.json(
-      { error: "Bank credit date is required." },
+      { error: "Invoice total must be a positive number." },
       { status: 422 }
     );
   }
   if (!Number.isFinite(amountCreditedINR) || amountCreditedINR <= 0) {
     return NextResponse.json(
       { error: "Amount credited (INR) must be a positive number." },
+      { status: 422 }
+    );
+  }
+  if (!bankCreditDate) {
+    return NextResponse.json(
+      { error: "Bank credit date is required." },
       { status: 422 }
     );
   }
@@ -81,10 +102,7 @@ export async function POST(
 
   const { data: registration } = await supabase
     .from("registrations")
-    .select(
-      `id, status, payment_currency,
-       billing:billing_details(state, is_gst_registered)`
-    )
+    .select("id, status, payment_currency")
     .eq("id", params.id)
     .maybeSingle();
   if (!registration) {
@@ -103,12 +121,6 @@ export async function POST(
     );
   }
 
-  type Billing = { state?: string | null; is_gst_registered?: boolean | null };
-  const billing = (
-    Array.isArray(registration.billing)
-      ? registration.billing[0]
-      : registration.billing
-  ) as Billing | null | undefined;
   const currency = registration.payment_currency as Currency;
 
   // Source invoice: a TAX invoice if one already exists, else the proforma.
@@ -118,10 +130,10 @@ export async function POST(
     .eq("registration_id", params.id)
     .order("issued_at", { ascending: false });
   const allInvoices = (invoicesRaw as Invoice[] | null) ?? [];
-  const taxInvoice = allInvoices.find((i) => i.invoice_type === "TAX") ?? null;
-  const proformaInvoice =
-    allInvoices.find((i) => i.invoice_type === "PROFORMA") ?? null;
-  const source = taxInvoice ?? proformaInvoice;
+  const source =
+    allInvoices.find((i) => i.invoice_type === "TAX") ??
+    allInvoices.find((i) => i.invoice_type === "PROFORMA") ??
+    null;
   if (!source) {
     return NextResponse.json(
       { error: "No invoice found for this registration." },
@@ -129,68 +141,79 @@ export async function POST(
     );
   }
 
-  // For a proforma, compute final forex+GST NOW and snapshot it, so the
-  // TAX invoice processSuccessfulPayment mints carries accurate numbers
-  // (mirrors the Razorpay create-order path). Legacy TAX invoices already
-  // hold their final amounts.
-  let amountPaidMajor: number;
-  if (source.invoice_type === "PROFORMA") {
-    const baseUSD = Number(source.base_amount_usd ?? 0);
-    let forexRate: number | null = null;
-    let forexDate: string | null = null;
-    let forexSource: string | null = null;
-    let forexTime: string | null = null;
-    if (currency === "INR") {
-      const live = await getLiveForexRate();
-      forexRate = live.rate;
-      forexDate = live.date;
-      forexSource = live.source;
-      forexTime = live.time;
-    }
-    const gst = calculateGST(
-      currency,
-      baseUSD,
-      forexRate ?? 0,
-      billing?.state ?? null,
-      !!billing?.is_gst_registered
-    );
-    await supabase
-      .from("invoices")
-      .update({
-        forex_rate_used: forexRate,
-        forex_rate_date: forexDate,
-        forex_rate_source: forexSource,
-        forex_rate_time: forexTime,
-        base_amount_usd: gst.baseAmountUSD,
-        base_amount_inr: currency === "INR" ? gst.baseAmountINR : null,
-        gst_type: gst.gstType,
-        cgst_percent: gst.cgstPercent,
-        cgst_amount: gst.cgstAmount,
-        sgst_percent: gst.sgstPercent,
-        sgst_amount: gst.sgstAmount,
-        igst_percent: gst.igstPercent,
-        igst_amount: gst.igstAmount,
-        total_amount_usd: currency === "USD" ? gst.totalAmountUSD : null,
-        total_amount_inr: currency === "INR" ? gst.totalAmountINR : null,
-      })
-      .eq("id", source.id);
-    amountPaidMajor =
-      currency === "INR" ? gst.totalAmountINR : gst.totalAmountUSD;
+  // ---- Build the final amounts from what was actually received -----
+  let snapshot: Partial<Invoice>;
+  if (currency === "USD") {
+    // Export of service — no GST. Invoice is the USD amount.
+    snapshot = {
+      base_amount_usd: invoiceTotal,
+      base_amount_inr: null,
+      gst_type: "NONE",
+      cgst_percent: 0,
+      cgst_amount: 0,
+      sgst_percent: 0,
+      sgst_amount: 0,
+      igst_percent: 0,
+      igst_amount: 0,
+      total_amount_usd: invoiceTotal,
+      total_amount_inr: null,
+      forex_rate_used: null,
+      forex_rate_date: null,
+      forex_rate_source: null,
+      forex_rate_time: null,
+    };
   } else {
-    amountPaidMajor =
-      currency === "INR"
-        ? Number(source.total_amount_inr ?? 0)
-        : Number(source.total_amount_usd ?? 0);
+    // INR — back 18% GST out of the inclusive total; split by type.
+    const gstType = body.gst_type === "CGST_SGST" ? "CGST_SGST" : "IGST";
+    const gstAmount = round2((invoiceTotal * 18) / 118);
+    const baseINR = round2(invoiceTotal - gstAmount);
+    const baseUSD = Number(source.base_amount_usd ?? 0);
+    const forexRate = baseUSD > 0 ? round2(baseINR / baseUSD) : null;
+
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+    let cgstPercent = 0;
+    let sgstPercent = 0;
+    let igstPercent = 0;
+    if (gstType === "CGST_SGST") {
+      cgstAmount = round2(gstAmount / 2);
+      sgstAmount = round2(gstAmount - cgstAmount); // keep the sum exact
+      cgstPercent = 9;
+      sgstPercent = 9;
+    } else {
+      igstAmount = gstAmount;
+      igstPercent = 18;
+    }
+
+    snapshot = {
+      base_amount_usd: source.base_amount_usd, // keep the USD reference
+      base_amount_inr: baseINR,
+      gst_type: gstType,
+      cgst_percent: cgstPercent,
+      cgst_amount: cgstAmount,
+      sgst_percent: sgstPercent,
+      sgst_amount: sgstAmount,
+      igst_percent: igstPercent,
+      igst_amount: igstAmount,
+      total_amount_usd: null,
+      total_amount_inr: invoiceTotal,
+      forex_rate_used: forexRate,
+      forex_rate_date: bankCreditDate,
+      forex_rate_source: "Manual (offline payment)",
+      forex_rate_time: null,
+    };
   }
 
-  // Record the manual payment (the audit row processSuccessfulPayment
-  // also re-points to the minted TAX invoice).
+  await supabase.from("invoices").update(snapshot).eq("id", source.id);
+
+  // Record the manual payment (audit + reconciliation).
   const { data: paymentRow, error: payErr } = await supabase
     .from("payments")
     .insert({
       invoice_id: source.id,
       registration_id: params.id,
-      amount_paid: amountPaidMajor,
+      amount_paid: invoiceTotal,
       currency,
       payment_method: paymentMethod,
       payment_status: "success",
@@ -212,7 +235,7 @@ export async function POST(
     );
   }
 
-  // Reuse the canonical finalize path → TAX invoice + confirm + email.
+  // Reuse the canonical finalize → TAX invoice + confirm + email.
   const result = await processSuccessfulPayment(supabase, {
     id: paymentRow.id,
     invoice_id: paymentRow.invoice_id,
