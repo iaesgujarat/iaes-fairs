@@ -26,6 +26,7 @@ export default function ScanLandingPage() {
   const [manualPassError, setManualPassError] = useState<string | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState<number | null>(null);
+  const [binding, setBinding] = useState(false);
 
   useEffect(() => {
     try {
@@ -34,6 +35,42 @@ export default function ScanLandingPage() {
     } catch {
       /* ignore parse errors */
     }
+  }, []);
+
+  // Pre-bound "ready" link: /scan?b=<registrationId>. Auto-resolves the
+  // booth and binds it on this device so reps skip the invoice step on
+  // fair day. Falls back to manual entry if the link can't be resolved.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const b = params.get("b");
+    if (!b) return;
+    setBinding(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/scan/by-registration?reg=${encodeURIComponent(b)}`
+        );
+        const body = await res.json();
+        if (!res.ok) throw new Error(body?.error || "Could not connect booth.");
+        const next: ScannerIdentity = {
+          registrationId: body.registrationId,
+          universityName: body.universityName,
+          invoiceNumber: body.invoiceNumber,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        setIdentity(next);
+      } catch (e) {
+        setError(
+          e instanceof Error
+            ? `${e.message} Enter your invoice number below.`
+            : "Could not connect your booth from the link. Enter your invoice number below."
+        );
+      } finally {
+        setBinding(false);
+        // Drop ?b= so a refresh/bookmark doesn't re-run the bind.
+        window.history.replaceState({}, "", "/scan");
+      }
+    })();
   }, []);
 
   // Live "N contacts saved" badge. Refreshes whenever the scanner home
@@ -131,6 +168,19 @@ export default function ScanLandingPage() {
     }
   }
 
+  if (!identity && binding) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-navy text-white">
+        <div className="text-center">
+          <p className="font-serif text-2xl font-semibold">IAES</p>
+          <p className="mt-3 animate-pulse text-sm text-white/70">
+            Connecting your booth…
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   if (!identity) {
     return (
       <main className="min-h-screen bg-navy text-white">
@@ -179,8 +229,14 @@ export default function ScanLandingPage() {
           </div>
 
           <Link
+            href="/guide"
+            className="mt-8 text-center text-xs text-gold hover:text-gold/80"
+          >
+            How does scanning work? Read the guide &rarr;
+          </Link>
+          <Link
             href="/"
-            className="mt-8 text-center text-xs text-white/55 hover:text-white"
+            className="mt-3 text-center text-xs text-white/55 hover:text-white"
           >
             &larr; Back to home
           </Link>

@@ -7,6 +7,8 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { PremiumLogoManager } from "@/components/PremiumLogoManager";
 import { EventOptinEditor } from "@/components/EventOptinEditor";
 import { RegistrationAdminControls } from "@/components/admin/RegistrationAdminControls";
+import { BoothLinks } from "@/components/admin/BoothLinks";
+import { appUrl } from "@/lib/mailerHelpers";
 import { formatUSD, formatDateShort } from "@/lib/utils";
 import type { FairItineraryStop, BillingDetails } from "@/types";
 
@@ -162,6 +164,11 @@ export default async function AdminRegistrationPage({
               initialSelectedIds={optedIds}
             />
           </div>
+
+          <BoothLinks
+            scanUrl={`${appUrl()}/scan?b=${reg.id}`}
+            portalUrl={`${appUrl()}/portal/${reg.id}/students`}
+          />
 
           <RegistrationAdminControls
             registrationId={reg.id}

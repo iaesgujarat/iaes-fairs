@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
+import { SendScannerGuideButton } from "@/components/admin/SendScannerGuideButton";
 import { FairLifecycleActions } from "@/components/FairLifecycleActions";
 import { GatewayToggle } from "@/components/GatewayToggle";
 import { formatDateShort, formatINR, formatUSD } from "@/lib/utils";
@@ -565,6 +566,11 @@ export default async function FairControlPanel({
                 : "Send to each university"
             }
           />
+        </div>
+
+        {/* Booth-scanner guide — pre-fair email to all universities */}
+        <div className="mb-6">
+          <SendScannerGuideButton fairId={f.id} fairName={f.name} />
         </div>
 
         {/* Lifecycle action panel */}
