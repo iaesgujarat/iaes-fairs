@@ -30,6 +30,7 @@ export const WA_TEMPLATES = {
   STUDENT_PASS: "student_pass",
   INSTITUTION_CONFIRMATION: "institution_confirmation",
   UNIVERSITY_REGISTERED: "university_registered",
+  SPOT_RESERVED: "spot_reserved",
 } as const;
 
 /**

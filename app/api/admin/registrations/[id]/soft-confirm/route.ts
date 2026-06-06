@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { SoftConfirmEmail } from "@/emails/SoftConfirmEmail";
+import {
+  registerWhatsAppContact,
+  sendWhatsAppTemplate,
+  WA_TEMPLATES,
+} from "@/lib/whatsappNotify";
 import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
@@ -42,7 +47,9 @@ export async function POST(
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      "id, status, contact_name, contact_email, university_name, fair:fairs(name, fair_date, fair_date_start)"
+      `id, status, contact_name, contact_email, contact_phone,
+       university_name, university_country, fair_id, whatsapp_consent,
+       fair:fairs(name, fair_date, fair_date_start)`
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -73,22 +80,24 @@ export async function POST(
     );
   }
 
+  const fair = (Array.isArray(reg.fair) ? reg.fair[0] : reg.fair) as
+    | Pick<Fair, "name" | "fair_date" | "fair_date_start">
+    | null;
+  const fairName = fair?.name ?? "IAES Education Fair";
+
   // Best-effort email — never fail the status change over a mail hiccup.
   let emailed = false;
   if (process.env.RESEND_API_KEY) {
     try {
-      const fair = (Array.isArray(reg.fair) ? reg.fair[0] : reg.fair) as
-        | Pick<Fair, "name" | "fair_date" | "fair_date_start">
-        | null;
       const resend = getResend();
       await resend.emails.send({
         from: FROM_EMAIL,
         to: reg.contact_email as string,
-        subject: `Spot reserved — ${fair?.name ?? "IAES Education Fair"}`,
+        subject: `Spot reserved — ${fairName}`,
         react: SoftConfirmEmail({
           contactName: reg.contact_name as string,
           universityName: reg.university_name as string,
-          fairName: fair?.name ?? "IAES Education Fair",
+          fairName,
           fairDate: fair?.fair_date_start || fair?.fair_date || "",
         }),
       });
@@ -97,6 +106,27 @@ export async function POST(
       console.error("Soft-confirm email failed:", e);
     }
   }
+
+  // WhatsApp "spot reserved" note — shows the rep we're on it. Keeps the
+  // cross-fair registry fresh, then sends the (utility) template. Both
+  // are fire-and-forget; no-op for a number we can't resolve or while
+  // the template/channel is dark. University reps get no default CC —
+  // a bare number simply isn't WhatsApp'd (email already covers them).
+  await registerWhatsAppContact(supabase, {
+    rawPhone: reg.contact_phone as string | null,
+    name: reg.contact_name as string,
+    audience: "university",
+    country: reg.university_country as string | null,
+    fairId: reg.fair_id as string | null,
+    consent: !!reg.whatsapp_consent,
+  });
+  await sendWhatsAppTemplate(supabase, {
+    fairId: reg.fair_id as string | null,
+    rawPhone: reg.contact_phone as string | null,
+    template: WA_TEMPLATES.SPOT_RESERVED,
+    context: "soft_confirm",
+    bodyParams: [reg.contact_name as string, fairName],
+  });
 
   return NextResponse.json({ ok: true, status: "soft_confirmed", emailed });
 }
