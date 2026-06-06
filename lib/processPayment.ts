@@ -184,6 +184,30 @@ async function sendConfirmation(
     const billing = (Array.isArray(regJoin.billing)
       ? regJoin.billing[0]
       : regJoin.billing) as BillingDetails | null;
+
+    // Public itinerary stops for this fair — included in the confirmation
+    // so the rep sees the tour/fair schedule the moment they're confirmed.
+    const { data: stopRows } = await supabase
+      .from("fair_itinerary")
+      .select(
+        "event_date, institution_name, venue_name, city, is_main_fair, sort_order"
+      )
+      .eq("fair_id", fair.id)
+      .eq("is_public", true)
+      .order("sort_order", { ascending: true });
+    const itinerary = (stopRows ?? []).map((s) => ({
+      date: new Date(s.event_date as string).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+      label: s.is_main_fair
+        ? "Main Education Fair"
+        : (s.venue_name as string) ||
+          (s.institution_name as string) ||
+          (s.city as string),
+      city: (s.city as string) ?? "",
+    }));
     const pdf = await renderInvoiceAttachment(supabase, {
       registration: regJoin as Registration,
       invoice,
@@ -211,6 +235,7 @@ async function sendConfirmation(
         amountPaidINR: invoice.total_amount_inr
           ? Number(invoice.total_amount_inr)
           : null,
+        itinerary,
       }),
     });
   } catch (e) {

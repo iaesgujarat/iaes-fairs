@@ -1,6 +1,12 @@
 import * as React from "react";
 import type { Currency } from "@/types";
 
+export interface ConfirmationItineraryItem {
+  date: string; // pretty, pre-formatted
+  label: string;
+  city: string;
+}
+
 interface Props {
   contactName: string;
   universityName: string;
@@ -12,6 +18,7 @@ interface Props {
   paymentCurrency: Currency;
   amountPaidUSD: number | null;
   amountPaidINR: number | null;
+  itinerary?: ConfirmationItineraryItem[];
 }
 
 function formatINR(amount: number): string {
@@ -41,6 +48,7 @@ export function ConfirmationEmail({
   paymentCurrency,
   amountPaidUSD,
   amountPaidINR,
+  itinerary,
 }: Props) {
   const prettyDate = new Date(fairDate).toLocaleDateString("en-IN", {
     weekday: "long",
@@ -159,10 +167,67 @@ export function ConfirmationEmail({
                 </tbody>
               </table>
 
+              {itinerary && itinerary.length > 0 && (
+                <>
+                  <p
+                    style={{
+                      marginTop: 28,
+                      marginBottom: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "#6F7B8F",
+                    }}
+                  >
+                    Event itinerary
+                  </p>
+                  <table width="100%" style={{ borderCollapse: "collapse" }}>
+                    <tbody>
+                      {itinerary.map((it, i) => (
+                        <tr key={i}>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderBottom: "1px solid #E1E6EF",
+                              fontSize: 13,
+                              color: "#0B2B5C",
+                              fontWeight: 600,
+                              whiteSpace: "nowrap",
+                              verticalAlign: "top",
+                              width: "40%",
+                            }}
+                          >
+                            {it.date}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px 0",
+                              borderBottom: "1px solid #E1E6EF",
+                              fontSize: 13,
+                              color: "#3A4763",
+                              textAlign: "right",
+                            }}
+                          >
+                            {it.label}
+                            {it.city ? (
+                              <span style={{ color: "#9AA4B8" }}>
+                                {" "}
+                                &middot; {it.city}
+                              </span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
               <p style={{ marginTop: 24, lineHeight: 1.6 }}>
-                We&rsquo;ll send the event briefing pack &mdash; venue map,
-                schedule, student profile data &mdash; approximately 4 weeks
-                before the fair.
+                We&rsquo;ll send the full event briefing pack &mdash; venue map,
+                detailed schedule, student profile data &mdash; approximately 4
+                weeks before the fair.
               </p>
 
               <p style={{ marginTop: 24, lineHeight: 1.6 }}>

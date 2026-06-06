@@ -115,12 +115,14 @@ export async function POST(
     return NextResponse.json({ error: updErr.message }, { status: 500 });
   }
 
-  // 2. Bump status='registered' → 'payment_open' for this fair
+  // 2. Bump pre-payment regs → 'payment_open' for this fair. Includes
+  //    soft_confirmed holds (admin-acknowledged but unpaid) so a held
+  //    spot becomes payable the moment the gateway opens (v22).
   const { error: bumpErr } = await supabase
     .from("registrations")
     .update({ status: "payment_open" })
     .eq("fair_id", f.id)
-    .eq("status", "registered");
+    .in("status", ["registered", "soft_confirmed"]);
   if (bumpErr) {
     return NextResponse.json({ error: bumpErr.message }, { status: 500 });
   }

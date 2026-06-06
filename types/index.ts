@@ -197,6 +197,7 @@ export interface BoothPricing {
 export type RegistrationStatus =
   | "registered"      // v8: gateway off, awaiting activation
   | "payment_open"    // v8: gateway activated, payment link sent
+  | "soft_confirmed"  // v22: admin-acknowledged hold, payment pending
   | "pending"         // legacy
   | "invoice_sent"    // legacy
   | "paid"
@@ -381,6 +382,16 @@ export interface Payment {
   payment_status: PaymentStatus;
   paid_at: string | null;
   created_at: string;
+  // v22 — manual / offline payment reconciliation (gateway entries
+  // leave these null). amount_credited_inr is the ACTUAL bank
+  // realisation; amount_paid above stays the invoice/billed amount.
+  entry_mode?: "gateway" | "manual";
+  bank_credit_date?: string | null;
+  reference_number?: string | null;
+  amount_credited_inr?: number | null;
+  remitter_name?: string | null;
+  notes?: string | null;
+  recorded_by?: string | null;
 }
 
 export interface AdminUser {

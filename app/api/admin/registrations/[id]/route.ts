@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 const ALLOWED_STATUSES: RegistrationStatus[] = [
   "registered",
   "payment_open",
+  "soft_confirmed",
   "pending",
   "invoice_sent",
   "paid",

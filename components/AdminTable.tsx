@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
 import type {
   Registration,
@@ -50,8 +50,9 @@ interface Row extends Registration {
 
 const ALL_STATUSES: (RegistrationStatus | "all")[] = [
   "all",
-  "pending",
-  "invoice_sent",
+  "registered",
+  "payment_open",
+  "soft_confirmed",
   "paid",
   "confirmed",
   "cancelled",
@@ -77,6 +78,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
     "all"
   );
   const [updating, setUpdating] = useState<string | null>(null);
+  const [payFor, setPayFor] = useState<Row | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -102,18 +104,19 @@ export function AdminTable({ rows }: { rows: Row[] }) {
     });
   }, [rows, query, statusFilter, tierFilter, currencyFilter]);
 
-  async function markConfirmed(registrationId: string) {
+  // Soft confirm — acknowledge/hold a spot before payment.
+  async function softConfirm(registrationId: string) {
     setUpdating(registrationId);
     try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "confirmed" }),
-      });
-      if (!res.ok) throw new Error("Update failed");
+      const res = await fetch(
+        `/api/admin/registrations/${registrationId}/soft-confirm`,
+        { method: "POST" }
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || "Soft confirm failed");
       window.location.reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not update");
+      alert(e instanceof Error ? e.message : "Could not soft-confirm");
     } finally {
       setUpdating(null);
     }
@@ -365,16 +368,30 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                           Manage
                         </Button>
                       </Link>
-                      {r.status !== "confirmed" && r.status !== "cancelled" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          loading={updating === r.id}
-                          onClick={() => markConfirmed(r.id)}
-                        >
-                          Confirm
-                        </Button>
-                      )}
+                      {r.status !== "soft_confirmed" &&
+                        r.status !== "paid" &&
+                        r.status !== "confirmed" &&
+                        r.status !== "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            loading={updating === r.id}
+                            onClick={() => softConfirm(r.id)}
+                          >
+                            Soft confirm
+                          </Button>
+                        )}
+                      {r.status !== "paid" &&
+                        r.status !== "confirmed" &&
+                        r.status !== "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="gold"
+                            onClick={() => setPayFor(r)}
+                          >
+                            Mark as paid
+                          </Button>
+                        )}
                       {r.status === "invoice_sent" && (
                         <Button
                           size="sm"
@@ -397,10 +414,149 @@ export function AdminTable({ rows }: { rows: Row[] }) {
       <div className="border-t border-navy/10 px-4 py-3 text-xs text-navy/55">
         Showing {filtered.length} of {rows.length} registrations
       </div>
+
+      {payFor && (
+        <MarkPaidModal row={payFor} onClose={() => setPayFor(null)} />
+      )}
     </div>
   );
 }
 
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-4 py-3 text-left">{children}</th>;
+}
+
+// ----------------------------------------------------------------
+// Hard-confirm: capture the received payment (matches our books +
+// powers the post-fair Finance MIS), then finalize → TAX invoice +
+// confirmation email + WhatsApp via /confirm-payment.
+// ----------------------------------------------------------------
+function MarkPaidModal({ row, onClose }: { row: Row; onClose: () => void }) {
+  const invoice = row.invoices?.[0];
+  const invoiceTotal = invoice ? formatInvoiceTotal(invoice) : "—";
+  const [form, setForm] = useState({
+    bank_credit_date: "",
+    amount_credited_inr: "",
+    payment_method: "Bank transfer",
+    reference_number: "",
+    remitter_name: "",
+    notes: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const set = (k: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(
+        `/api/admin/registrations/${row.id}/confirm-payment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bank_credit_date: form.bank_credit_date,
+            amount_credited_inr: form.amount_credited_inr,
+            payment_method: form.payment_method,
+            reference_number: form.reference_number,
+            remitter_name: form.remitter_name,
+            notes: form.notes,
+          }),
+        }
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || "Could not confirm payment");
+      window.location.reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not confirm payment");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 p-4">
+      <div className="w-full max-w-lg rounded-lg border border-navy/10 bg-white shadow-xl">
+        <div className="border-b border-navy/10 px-5 py-4">
+          <p className="text-sm font-semibold text-navy">
+            Record payment — {row.university_name}
+          </p>
+          <p className="mt-0.5 text-xs text-navy/55">
+            Invoice amount: <strong>{invoiceTotal}</strong>. This confirms the
+            booking, issues the tax invoice, and emails the rep. Capture the
+            actual bank credit for your books / MIS.
+          </p>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              type="date"
+              label="Bank credit date *"
+              value={form.bank_credit_date}
+              onChange={(e) => set("bank_credit_date")(e.target.value)}
+            />
+            <Input
+              type="number"
+              label="Amount credited (INR) *"
+              placeholder="e.g. 124500"
+              value={form.amount_credited_inr}
+              onChange={(e) => set("amount_credited_inr")(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-navy">
+                Payment method *
+              </label>
+              <select
+                className="w-full rounded-md border border-navy/15 bg-white px-3 py-2.5 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
+                value={form.payment_method}
+                onChange={(e) => set("payment_method")(e.target.value)}
+              >
+                <option>Bank transfer</option>
+                <option>Wire / SWIFT</option>
+                <option>NEFT / RTGS / IMPS</option>
+                <option>Cheque</option>
+                <option>Cash</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <Input
+              label="Reference / UTR"
+              placeholder="optional"
+              value={form.reference_number}
+              onChange={(e) => set("reference_number")(e.target.value)}
+            />
+          </div>
+          <div className="mt-4">
+            <Input
+              label="Remitter name"
+              placeholder="optional — who actually paid"
+              value={form.remitter_name}
+              onChange={(e) => set("remitter_name")(e.target.value)}
+            />
+          </div>
+          <div className="mt-4">
+            <Textarea
+              label="Notes"
+              placeholder="optional — anything for reconciliation"
+              value={form.notes}
+              onChange={(e) => set("notes")(e.target.value)}
+            />
+          </div>
+          {err && <p className="mt-3 text-xs text-red-600">{err}</p>}
+        </div>
+        <div className="flex items-center justify-end gap-3 border-t border-navy/10 px-5 py-4">
+          <Button size="sm" variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button size="sm" variant="gold" loading={busy} onClick={submit}>
+            Confirm payment received
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
