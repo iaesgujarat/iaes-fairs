@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+
+// How long the "✓ Saved" confirmation shows before the scanner reopens
+// for the next student. Long enough to register, short enough to flow.
+const AUTO_RETURN_MS = 1500;
 
 const STORAGE_KEY = "iaes.scan.university";
 
@@ -55,6 +60,9 @@ export default function ScanProfilePage({
     null | { alreadyScanned: boolean; scannedAt: string }
   >(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [returning, setReturning] = useState(false);
+  const router = useRouter();
+  const returnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -64,6 +72,19 @@ export default function ScanProfilePage({
       /* ignore */
     }
   }, []);
+
+  // Clear any pending auto-return if the rep navigates away themselves.
+  useEffect(() => {
+    return () => {
+      if (returnTimer.current) clearTimeout(returnTimer.current);
+    };
+  }, []);
+
+  function cancelReturn() {
+    if (returnTimer.current) clearTimeout(returnTimer.current);
+    returnTimer.current = null;
+    setReturning(false);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -87,7 +108,10 @@ export default function ScanProfilePage({
     };
   }, [params.passUuid]);
 
-  async function save(opts?: { interestedOverride?: boolean }) {
+  async function save(opts?: {
+    interestedOverride?: boolean;
+    autoReturn?: boolean;
+  }) {
     if (!identity || !profile) return;
     setSaving(true);
     setSaveError(null);
@@ -111,6 +135,14 @@ export default function ScanProfilePage({
           minute: "2-digit",
         }),
       });
+      // Hands-free loop: after the primary save, reopen the scanner for
+      // the next student. The interest-toggle re-save does NOT auto-return.
+      if (opts?.autoReturn) {
+        setReturning(true);
+        returnTimer.current = setTimeout(() => {
+          router.push("/scan");
+        }, AUTO_RETURN_MS);
+      }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed.");
     } finally {
@@ -270,10 +302,11 @@ export default function ScanProfilePage({
             {/* Primary action — capture EVERY conversation. Interest is
                 an optional sub-flag below, never a gate on saving. */}
             <Button
-              onClick={() => save()}
+              onClick={() => save({ autoReturn: true })}
               variant="gold"
               size="lg"
               loading={saving}
+              disabled={returning}
               className="mt-5 w-full"
             >
               <Save className="h-4 w-4" />
@@ -283,11 +316,26 @@ export default function ScanProfilePage({
               Tap for every student you speak to.
             </p>
 
-            {saveState && (
+            {saveState && !returning && (
               <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
                 {saveState.alreadyScanned
                   ? "✓ In your list — details updated."
                   : `✓ Saved · ${saveState.scannedAt}`}
+              </div>
+            )}
+
+            {returning && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+                <span className="animate-pulse">
+                  ✓ Saved — opening scanner for the next student…
+                </span>
+                <button
+                  type="button"
+                  onClick={cancelReturn}
+                  className="shrink-0 font-medium text-navy underline underline-offset-2"
+                >
+                  Stay
+                </button>
               </div>
             )}
 
@@ -298,6 +346,7 @@ export default function ScanProfilePage({
                 onChange={(e) => {
                   const v = e.target.checked;
                   setInterested(v);
+                  if (returning) cancelReturn();
                   if (saveState) save({ interestedOverride: v });
                 }}
                 className="mt-0.5 accent-navy"
