@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { InvoiceActions } from "@/components/InvoiceActions";
 import { InvoiceUSD } from "@/components/InvoiceView/InvoiceUSD";
 import { InvoiceINR } from "@/components/InvoiceView/InvoiceINR";
+import { BankDetailsHTML } from "@/components/InvoiceView/BankDetailsHTML";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
 import { fetchPublicItinerary } from "@/lib/itinerary";
 import { calculateGST } from "@/lib/gst";
@@ -359,6 +360,8 @@ function ProformaView({
           </p>
         </div>
       )}
+
+      <BankDetailsHTML />
 
       <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-semibold uppercase tracking-wider text-xs">
