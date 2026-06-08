@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { InvoiceEmail } from "@/emails/InvoiceEmail";
 import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import { w8Attachment } from "@/lib/w8";
 import { getAttnRecipient, billingCc } from "@/lib/billTo";
 import type {
   Fair,
@@ -84,12 +85,17 @@ export async function POST(
   });
   const cc = billingCc(reg as Registration, reg.contact_email);
 
+  // USD invoices carry IAES's W-8BEN-E (US foreign-status cert).
+  const attachmentList = [pdf, w8Attachment(invoice.payment_currency)].filter(
+    Boolean
+  ) as NonNullable<typeof pdf>[];
+
   const resend = getResend();
   await resend.emails.send({
     from: FROM_EMAIL,
     to: reg.contact_email,
     cc: cc ? [cc] : undefined,
-    attachments: pdf ? [pdf] : undefined,
+    attachments: attachmentList.length ? attachmentList : undefined,
     subject: `Reminder: Invoice for ${fair.name} — ${reg.university_name}`,
     react: InvoiceEmail({
       contactName: reg.contact_name,

@@ -208,6 +208,13 @@ export function ProformaEmail({
         be issued upon receipt of payment.
         <br />• You will receive an email when the payment gateway opens. Your
         spot is reserved.
+        {paymentCurrency === "USD" && (
+          <>
+            <br />• For your accounts/AP team: IAES&rsquo;s{" "}
+            <strong>W-8BEN-E</strong> (Certificate of Foreign Status) is
+            attached to this email.
+          </>
+        )}
       </p>
 
       <p style={{ marginTop: 22, lineHeight: 1.6 }}>

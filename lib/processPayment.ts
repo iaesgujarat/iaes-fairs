@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/resend";
 import { ConfirmationEmail } from "@/emails/ConfirmationEmail";
 import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import { w8Attachment } from "@/lib/w8";
 import type {
   Currency,
   Fair,
@@ -214,11 +215,19 @@ async function sendConfirmation(
       fair,
       billing,
     });
+    // USD bookings keep IAES's W-8BEN-E on the confirmation too, so the
+    // foreign-status cert is on file alongside the tax invoice.
+    const confirmationAttachments = [
+      pdf,
+      w8Attachment(invoice.payment_currency),
+    ].filter(Boolean) as NonNullable<typeof pdf>[];
     const resend = getResend();
     await resend.emails.send({
       from: FROM_EMAIL,
       to: regJoin.contact_email,
-      attachments: pdf ? [pdf] : undefined,
+      attachments: confirmationAttachments.length
+        ? confirmationAttachments
+        : undefined,
       subject: `Booking confirmed — ${fair.name} · ${invoice.invoice_number ?? ""}`,
       react: ConfirmationEmail({
         contactName: regJoin.contact_name,

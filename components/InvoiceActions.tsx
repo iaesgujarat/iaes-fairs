@@ -53,8 +53,25 @@ export function InvoiceActions({
 
   const downloadLabel = isProforma ? "Download Proforma" : "Download PDF";
 
+  // US universities' AP teams need IAES's W-8BEN-E (foreign-status cert)
+  // before paying. Offer it on USD invoices via the registration-gated
+  // route (never a public URL — it's a signed tax document).
+  const isUSD = invoice.payment_currency === "USD";
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
+      {isUSD && (
+        <a
+          href={`/api/invoice/${registration.id}/w8`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="secondary">
+            <Download className="h-4 w-4" />
+            W-8BEN-E (US tax form)
+          </Button>
+        </a>
+      )}
       <PDFDownloadLink
         document={
           isProforma ? (

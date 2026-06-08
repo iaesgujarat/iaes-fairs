@@ -7,6 +7,7 @@ import { InvoiceEmail } from "@/emails/InvoiceEmail";
 import { formatFairDateRange } from "@/lib/mailerHelpers";
 import { getAttnRecipient, billingCc } from "@/lib/billTo";
 import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import { w8Attachment } from "@/lib/w8";
 import type {
   Fair,
   Invoice,
@@ -84,7 +85,11 @@ export async function POST(
     fair,
     billing,
   });
-  const attachments = pdf ? [pdf] : undefined;
+  // USD documents carry IAES's W-8BEN-E (US foreign-status cert).
+  const attachmentList = [pdf, w8Attachment(active.payment_currency)].filter(
+    Boolean
+  ) as NonNullable<typeof pdf>[];
+  const attachments = attachmentList.length ? attachmentList : undefined;
   const resend = getResend();
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||

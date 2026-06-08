@@ -24,6 +24,7 @@ import {
 } from "@/lib/whatsappNotify";
 import { toE164 } from "@/lib/phoneE164";
 import { renderInvoiceAttachment } from "@/lib/invoicePdf";
+import { w8Attachment } from "@/lib/w8";
 import type {
   Fair,
   PricingTier,
@@ -433,7 +434,15 @@ export async function POST(req: Request) {
       fair: f,
       billing: billingForPdf,
     });
-    const proformaAttachments = proformaPdf ? [proformaPdf] : undefined;
+    // USD proformas carry IAES's W-8BEN-E so US AP teams have the foreign-
+    // status cert on file without the rep forwarding it separately.
+    const proformaAttachmentList = [
+      proformaPdf,
+      w8Attachment(input.payment_currency),
+    ].filter(Boolean) as NonNullable<typeof proformaPdf>[];
+    const proformaAttachments = proformaAttachmentList.length
+      ? proformaAttachmentList
+      : undefined;
 
     try {
       if (process.env.RESEND_API_KEY) {
@@ -579,7 +588,9 @@ export async function POST(req: Request) {
         from: FROM_EMAIL,
         to: input.contact_email,
         cc: proformaCc,
-        attachments: invoicePdf ? [invoicePdf] : undefined,
+        attachments: [invoicePdf, w8Attachment(input.payment_currency)].filter(
+          Boolean
+        ) as NonNullable<typeof invoicePdf>[],
         subject: `Invoice for ${f.name} — ${invoice.invoice_number}`,
         react: InvoiceEmail({
           contactName: input.contact_name,
