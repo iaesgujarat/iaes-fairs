@@ -21,6 +21,12 @@ export function SiteFooter() {
               Ahmedabad, Gujarat &mdash; A registered non-profit advancing
               U.S.&ndash;India education exchange.
             </p>
+            <Link
+              href="/subscribe"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-gold-500/50 px-3.5 py-1.5 text-xs font-medium text-gold-600 hover:bg-gold-500 hover:text-white"
+            >
+              🔔 Subscribe for future events
+            </Link>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wider text-navy/60">

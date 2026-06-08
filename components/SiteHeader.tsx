@@ -44,6 +44,16 @@ export function SiteHeader({ variant = "navy" }: { variant?: "navy" | "light" })
             Register
           </Link>
           <Link
+            href="/subscribe"
+            className={
+              isNavy
+                ? "rounded-full border border-gold/60 px-3 py-1.5 text-gold hover:bg-gold hover:text-navy"
+                : "rounded-full border border-gold-500/50 px-3 py-1.5 text-gold-600 hover:bg-gold-500 hover:text-white"
+            }
+          >
+            🔔 Future events
+          </Link>
+          <Link
             href="/admin/login"
             className={
               isNavy
