@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { registrationSchema, type RegistrationInput } from "@/lib/schemas";
 import { calculateGST } from "@/lib/gst";
 import { getFairPricing } from "@/lib/pricing";
@@ -399,15 +400,23 @@ export function RegistrationForm({
               error={errors.contact_email?.message}
               {...register("contact_email")}
             />
-            <Input
-              type="tel"
-              label="Phone Number"
-              required
-              placeholder="+1 562 985 4111 / +91 98765 43210"
-              hint="Include your country code."
-              error={errors.contact_phone?.message}
-              {...register("contact_phone")}
-            />
+            <div className="w-full">
+              {/* Registered hidden field; the picker drives its value via
+                  setValue so the submitted phone is always full E.164. */}
+              <input type="hidden" {...register("contact_phone")} />
+              <PhoneInput
+                label="Phone Number"
+                required
+                country={watch("university_country")}
+                hint="Pick your country code, then the number — used for WhatsApp updates."
+                error={errors.contact_phone?.message}
+                onChange={(val) =>
+                  setValue("contact_phone", val, {
+                    shouldValidate: !!errors.contact_phone,
+                  })
+                }
+              />
+            </div>
           </div>
           <Textarea
             label="Special Requests"
