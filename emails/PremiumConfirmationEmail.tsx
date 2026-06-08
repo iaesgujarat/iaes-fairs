@@ -1,4 +1,5 @@
 import * as React from "react";
+import { BankDetailsEmail } from "./BankDetailsEmail";
 
 interface Props {
   contactName: string;
@@ -166,6 +167,8 @@ export function PremiumConfirmationEmail({
                   The payment gateway opens shortly — you will be notified.
                 </p>
               </div>
+
+              <BankDetailsEmail />
 
               <div
                 style={{

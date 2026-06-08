@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Currency } from "@/types";
 import { MailerLayout } from "./_layout";
+import { BankDetailsEmail } from "./BankDetailsEmail";
 
 interface Props {
   contactName: string;
@@ -216,6 +217,8 @@ export function ProformaEmail({
           </>
         )}
       </p>
+
+      <BankDetailsEmail />
 
       <p style={{ marginTop: 22, lineHeight: 1.6 }}>
         Fair dates: <strong>{fairDateRange}</strong>

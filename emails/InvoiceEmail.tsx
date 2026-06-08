@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { Currency } from "@/types";
+import { BankDetailsEmail } from "./BankDetailsEmail";
 
 interface Props {
   contactName: string;
@@ -193,6 +194,8 @@ export function InvoiceEmail({
                   Pay Now &rarr;
                 </a>
               </div>
+
+              <BankDetailsEmail />
 
               <p
                 style={{
