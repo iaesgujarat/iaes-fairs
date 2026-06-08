@@ -32,6 +32,7 @@ export const WA_TEMPLATES = {
   UNIVERSITY_REGISTERED: "university_registered",
   SPOT_RESERVED: "spot_reserved",
   BOOTH_SCANNER_READY: "booth_scanner_ready",
+  FAIR_ANNOUNCEMENT: "fair_announcement",
 } as const;
 
 /**
