@@ -35,13 +35,22 @@ export const IAES_BANK_INR_ROWS: ReadonlyArray<readonly [string, string]> = [
   ["IFSC Code", IAES_BANK.inr.ifscCode],
 ];
 
+// Self-contained USD wire block: a US payer's bank needs the BENEFICIARY
+// (IAES) + BENEFICIARY BANK (Kotak) AND the correspondent/intermediary
+// (Citi). All restated here so nothing must be borrowed from the INR
+// column to complete a USD wire.
 export const IAES_BANK_USD_ROWS: ReadonlyArray<readonly [string, string]> = [
+  ["Beneficiary", "Indo American Education Society"],
+  ["Beneficiary Bank", IAES_BANK.inr.bankName],
+  ["Beneficiary A/c No.", IAES_BANK.inr.accountNumber],
+  ["Beneficiary Bank SWIFT", IAES_BANK.inr.swiftCode],
+  ["Beneficiary Bank Address", IAES_BANK.inr.bankAddress],
   ["Correspondent Bank", IAES_BANK.usdCorrespondent.correspondentBank],
   [
     "Correspondent Bank Address",
     IAES_BANK.usdCorrespondent.correspondentBankAddress,
   ],
   ["Intermediary Bank Acc. No.", IAES_BANK.usdCorrespondent.intermediaryBankAccountNo],
-  ["Swift", IAES_BANK.usdCorrespondent.swift],
+  ["Correspondent SWIFT", IAES_BANK.usdCorrespondent.swift],
   ["Fedwire Routing no", IAES_BANK.usdCorrespondent.fedwireRoutingNo],
 ];
