@@ -9,7 +9,7 @@
 
 | Item | Value |
 | --- | --- |
-| Supplier | IAES (International Academic Exchange Services) |
+| Supplier | IAES — Indo American Education Society |
 | GSTIN | 24AAATI2674J1ZM |
 | State code | 24 (Gujarat) |
 | Service classification | SAC **998596** — events, exhibitions, conventions and trade-show organisation services |
