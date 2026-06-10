@@ -178,6 +178,31 @@ export interface AnnouncementSend {
   resend_email_id: string | null;
 }
 
+// v21 — self-serve "subscribe for future events" lead (announcement_leads)
+export interface AnnouncementLead {
+  id: string;
+  role: "university" | "student";
+  full_name: string;
+  email: string;
+  phone_e164: string | null;
+  whatsapp_consent: boolean;
+  email_consent: boolean;
+  university_name: string | null;
+  country: string | null;
+  job_title: string | null;
+  preferred_months: string[] | null;
+  city: string | null;
+  study_level: string | null;
+  preferred_countries: string[] | null;
+  field_of_interest: string | null;
+  intake_year: string | null;
+  source: string | null;
+  is_active: boolean;
+  unsubscribed_at: string | null;
+  created_at: string;
+  last_seen_at: string;
+}
+
 // ---------- v7: booth pricing ----------
 export interface BoothConfig {
   totalTables: number;

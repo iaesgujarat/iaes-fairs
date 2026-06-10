@@ -94,6 +94,12 @@ export default async function SequencesPage() {
                 Fairs
               </Link>
               <Link
+                href="/admin/subscribers"
+                className="text-navy/65 hover:text-navy"
+              >
+                Subscribers
+              </Link>
+              <Link
                 href="/admin/sequences"
                 className="font-medium text-navy underline-offset-4"
               >

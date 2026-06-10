@@ -108,6 +108,12 @@ export default async function AdminDashboardPage({
                 Fairs
               </Link>
               <Link
+                href="/admin/subscribers"
+                className="text-navy/65 hover:text-navy"
+              >
+                Subscribers
+              </Link>
+              <Link
                 href="/admin/sequences"
                 className="text-navy/65 hover:text-navy"
               >
