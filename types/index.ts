@@ -307,6 +307,31 @@ export type InstitutionType =
   | "Coaching Institute"
   | "Other";
 
+export type CampusHostStatus =
+  | "new"
+  | "contacted"
+  | "scheduled"
+  | "declined"
+  | "cancelled";
+
+// v13 — Indian HEI requesting US reps visit their campus (campus_host_requests)
+export interface CampusHostRequest {
+  id: string;
+  fair_id: string;
+  official_name: string;
+  official_email: string;
+  official_phone: string;
+  institution_name: string;
+  website: string | null;
+  study_programs: string[];
+  approx_participants: string;
+  proposed_datetime: string;
+  terms_accepted: boolean;
+  terms_accepted_at: string | null;
+  status: CampusHostStatus;
+  created_at: string;
+}
+
 export type InstitutionStatus = "registered" | "confirmed" | "cancelled";
 
 export interface InstitutionRegistration {

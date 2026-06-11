@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AdminTable } from "@/components/AdminTable";
 import { InstitutionAdminTable } from "@/components/InstitutionAdminTable";
+import { CampusHostAdminTable } from "@/components/admin/CampusHostAdminTable";
 import { FairDayTab } from "@/components/FairDayTab";
 import { SignOutButton } from "@/components/SignOutButton";
 import { formatINR, formatUSD } from "@/lib/utils";
@@ -13,6 +14,7 @@ import type {
   Fair,
   Payment,
   InstitutionRegistration,
+  CampusHostRequest,
   WaitlistSignup,
 } from "@/types";
 
@@ -43,10 +45,15 @@ interface InstRow extends InstitutionRegistration {
   fair: Pick<Fair, "id" | "name" | "fair_date">;
 }
 
-type Tab = "university" | "institution" | "fairday" | "waitlist";
+interface HostRow extends CampusHostRequest {
+  fair: Pick<Fair, "id" | "name" | "fair_date">;
+}
+
+type Tab = "university" | "institution" | "campushost" | "fairday" | "waitlist";
 
 function resolveTab(value?: string): Tab {
   if (value === "institution") return "institution";
+  if (value === "campushost") return "campushost";
   if (value === "fairday") return "fairday";
   if (value === "waitlist") return "waitlist";
   return "university";
@@ -150,6 +157,9 @@ export default async function AdminDashboardPage({
           <TabLink href="/admin/dashboard?tab=institution" active={tab === "institution"}>
             Institution Registrations
           </TabLink>
+          <TabLink href="/admin/dashboard?tab=campushost" active={tab === "campushost"}>
+            Campus Hosts
+          </TabLink>
           <TabLink href="/admin/dashboard?tab=fairday" active={tab === "fairday"}>
             Fair Day
           </TabLink>
@@ -165,6 +175,7 @@ export default async function AdminDashboardPage({
 
         {tab === "university" && <UniversityTab />}
         {tab === "institution" && <InstitutionTab />}
+        {tab === "campushost" && <CampusHostTab />}
         {tab === "fairday" && <FairDayWrapper />}
         {tab === "waitlist" && <WaitlistTab />}
       </main>
@@ -366,6 +377,44 @@ async function InstitutionTab() {
       </div>
 
       <InstitutionAdminTable rows={rows} />
+    </>
+  );
+}
+
+// ----------------------------------------------------------------
+// Campus Hosts tab — visit requests from Indian HEIs
+// ----------------------------------------------------------------
+async function CampusHostTab() {
+  const supabase = createAdminClient();
+  const { data: requests } = await supabase
+    .from("campus_host_requests")
+    .select(`*, fair:fairs(id, name, fair_date)`)
+    .order("created_at", { ascending: false });
+
+  const rows: HostRow[] = (requests as HostRow[]) || [];
+
+  return (
+    <>
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Requests Received" value={rows.length.toString()} />
+        <StatCard
+          label="New (Needs Contact)"
+          value={rows.filter((r) => r.status === "new").length.toString()}
+          accent="yellow"
+        />
+        <StatCard
+          label="Contacted"
+          value={rows.filter((r) => r.status === "contacted").length.toString()}
+          accent="navy"
+        />
+        <StatCard
+          label="Scheduled"
+          value={rows.filter((r) => r.status === "scheduled").length.toString()}
+          accent="green"
+        />
+      </div>
+
+      <CampusHostAdminTable rows={rows} />
     </>
   );
 }

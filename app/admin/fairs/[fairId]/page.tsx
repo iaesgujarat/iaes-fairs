@@ -8,6 +8,7 @@ import { SendScannerGuideButton } from "@/components/admin/SendScannerGuideButto
 import { AnnounceSubscribersButton } from "@/components/admin/AnnounceSubscribersButton";
 import { FairLifecycleActions } from "@/components/FairLifecycleActions";
 import { GatewayToggle } from "@/components/GatewayToggle";
+import { CampusHostToggle } from "@/components/admin/CampusHostToggle";
 import { formatDateShort, formatINR, formatUSD } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/fairStatus";
 import { getFairPricing } from "@/lib/pricing";
@@ -74,6 +75,7 @@ export default async function FairControlPanel({
     { data: stopsData },
     { data: premiumStatus },
     { data: tableSummary },
+    { count: hostRequestCount },
   ] = await Promise.all([
     supabase.from("fairs").select("*").eq("id", params.fairId).maybeSingle(),
     supabase
@@ -109,6 +111,10 @@ export default async function FairControlPanel({
       )
       .eq("fair_id", params.fairId)
       .maybeSingle(),
+    supabase
+      .from("campus_host_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("fair_id", params.fairId),
   ]);
 
   // v14 — null pre-migration / no premium rows; cards degrade.
@@ -538,6 +544,18 @@ export default async function FairControlPanel({
             activatedAt={f.gateway_activated_at ?? null}
             activationNote={f.gateway_activation_note ?? null}
             registeredCount={registered}
+          />
+        </div>
+
+        {/* Campus-host programme toggle */}
+        <div className="mb-6">
+          <CampusHostToggle
+            fairId={f.id}
+            active={!!f.campus_host_requests_active}
+            activatedAt={f.campus_host_activated_at ?? null}
+            activationNote={f.campus_host_activation_note ?? null}
+            requestCount={hostRequestCount ?? 0}
+            fairPublished={f.status === "PUBLISHED"}
           />
         </div>
 
