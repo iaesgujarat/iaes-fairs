@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { campusHostRequestSchema } from "@/lib/schemas";
 import { sendAdminNotification } from "@/lib/adminNotify";
+import { getResend, FROM_EMAIL } from "@/lib/resend";
+import { CampusHostRequestReceivedEmail } from "@/emails/CampusHostRequestReceivedEmail";
 import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
@@ -81,9 +83,31 @@ export async function POST(req: Request) {
     );
   }
 
-  // Internal admin alert — non-blocking. No dedicated admin page yet
-  // for campus_host_requests, so the email itself carries everything
-  // an admin needs to reach out to the official directly.
+  // Acknowledge to the official (non-blocking) — sets the "we'll be in
+  // touch, not yet confirmed" expectation while the team reviews.
+  try {
+    if (process.env.RESEND_API_KEY) {
+      const resend = getResend();
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: input.official_email,
+        subject: `Campus-visit request received — ${f.name}`,
+        react: CampusHostRequestReceivedEmail({
+          officialName: input.official_name,
+          institutionName: input.institution_name,
+          fairName: f.name,
+          studyPrograms: input.study_programs,
+          approxParticipants: input.approx_participants,
+          proposedDatetime: input.proposed_datetime,
+        }),
+      });
+    }
+  } catch (e) {
+    console.error("Campus-host acknowledgment email failed:", e);
+  }
+
+  // Internal admin alert — non-blocking. The email carries the full
+  // request; work it from the dashboard's Campus Hosts tab.
   await sendAdminNotification({
     subject: `New campus-host request: ${input.institution_name} — ${f.name}`,
     title: "New campus-host request",
@@ -100,7 +124,7 @@ export async function POST(req: Request) {
       { label: "Proposed slot", value: input.proposed_datetime },
     ],
     note:
-      "No dedicated admin page yet — review in Supabase 'campus_host_requests' table or reply directly to the official's email above to coordinate.",
+      "Work this request from Admin → Dashboard → Campus Hosts (mark contacted / scheduled / declined), or reply directly to the official's email above.",
   });
 
   return NextResponse.json({ requestId: request.id });
