@@ -13,7 +13,7 @@ interface Props {
 type Meta = { saving?: boolean; saved?: boolean; error?: string | null };
 
 const ADD_BUTTONS: { type: ItineraryEventType; label: string }[] = [
-  { type: "CAMPUS_VISIT", label: "+ Add Campus Visit" },
+  { type: "CAMPUS_VISIT", label: "+ Add Campus Fair" },
   { type: "OPEN_FAIR", label: "+ Add Open Fair" },
   { type: "TRAVEL", label: "+ Add Travel Day" },
   { type: "FREE", label: "+ Add Free Day" },
