@@ -362,7 +362,7 @@ export function ItineraryBuilder({ fairId, initialStops }: Props) {
                         commit(stop.id, "event_type", e.target.value)
                       }
                     >
-                      <option value="CAMPUS_VISIT">Campus Visit</option>
+                      <option value="CAMPUS_VISIT">Campus Fair</option>
                       <option value="OPEN_FAIR">Open Fair</option>
                       <option value="TRAVEL">Travel Day</option>
                       <option value="FREE">Free Day</option>
