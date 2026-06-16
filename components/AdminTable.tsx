@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { StatusBadge } from "@/components/ui/Badge";
+import { StatusBadge, REGISTRATION_STATUS_LABELS } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
@@ -160,7 +160,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
         >
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "All statuses" : s.replace("_", " ")}
+              {s === "all" ? "All statuses" : REGISTRATION_STATUS_LABELS[s]}
             </option>
           ))}
         </select>

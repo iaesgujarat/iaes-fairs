@@ -45,17 +45,27 @@ export function Badge({
   );
 }
 
+const REGISTRATION_STATUS_BADGE: Record<
+  RegistrationStatus,
+  { variant: BadgeVariant; label: string }
+> = {
+  registered: { variant: "gold", label: "Registered" },
+  payment_open: { variant: "blue", label: "Payment Open" },
+  soft_confirmed: { variant: "navy", label: "Soft Confirmed" },
+  pending: { variant: "yellow", label: "Pending" },
+  invoice_sent: { variant: "blue", label: "Invoice Sent" },
+  paid: { variant: "purple", label: "Paid" },
+  confirmed: { variant: "green", label: "Confirmed" },
+  cancelled: { variant: "red", label: "Cancelled" },
+};
+
+/** Canonical user-facing labels for each registration status. */
+export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> =
+  Object.fromEntries(
+    Object.entries(REGISTRATION_STATUS_BADGE).map(([k, v]) => [k, v.label])
+  ) as Record<RegistrationStatus, string>;
+
 export function StatusBadge({ status }: { status: RegistrationStatus }) {
-  const map: Record<RegistrationStatus, { variant: BadgeVariant; label: string }> = {
-    registered: { variant: "gold", label: "Registered" },
-    payment_open: { variant: "blue", label: "Payment Open" },
-    soft_confirmed: { variant: "navy", label: "Soft Confirmed" },
-    pending: { variant: "yellow", label: "Pending" },
-    invoice_sent: { variant: "blue", label: "Invoice Sent" },
-    paid: { variant: "purple", label: "Paid" },
-    confirmed: { variant: "green", label: "Confirmed" },
-    cancelled: { variant: "red", label: "Cancelled" },
-  };
-  const { variant, label } = map[status];
+  const { variant, label } = REGISTRATION_STATUS_BADGE[status];
   return <Badge variant={variant}>{label}</Badge>;
 }
