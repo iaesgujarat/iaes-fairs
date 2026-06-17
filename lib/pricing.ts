@@ -1,5 +1,19 @@
 import type { Fair, PricingTier } from "@/types";
 
+/** Plain user-facing labels for each pricing tier (filters, prose). */
+export const PRICING_TIER_LABELS: Record<PricingTier, string> = {
+  EARLYBIRD: "Early Bird",
+  STANDARD: "Standard",
+  PREMIUM: "Premium",
+};
+
+/** Emphasised badge labels (emoji + uppercase) for pills and pricing cards. */
+export const PRICING_TIER_BADGE_LABELS: Record<PricingTier, string> = {
+  EARLYBIRD: "⭐ EARLY BIRD",
+  STANDARD: "STANDARD",
+  PREMIUM: "💎 PREMIUM",
+};
+
 export interface FairPricing {
   /** v3 spec field — STANDARD or EARLYBIRD */
   tier: PricingTier;

@@ -28,6 +28,14 @@ const PILL_BY_STATUS: Record<CampusHostStatus, string> = {
   cancelled: "bg-red-50 text-red-700",
 };
 
+const STATUS_LABELS: Record<CampusHostStatus, string> = {
+  new: "New",
+  contacted: "Contacted",
+  scheduled: "Scheduled",
+  declined: "Declined",
+  cancelled: "Cancelled",
+};
+
 export function CampusHostAdminTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -101,7 +109,7 @@ export function CampusHostAdminTable({ rows }: { rows: Row[] }) {
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "All statuses" : s}
+              {s === "all" ? "All statuses" : STATUS_LABELS[s]}
             </option>
           ))}
         </select>
@@ -185,7 +193,7 @@ export function CampusHostAdminTable({ rows }: { rows: Row[] }) {
                   <span
                     className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${PILL_BY_STATUS[r.status]}`}
                   >
-                    {r.status}
+                    {STATUS_LABELS[r.status]}
                   </span>
                   <div className="mt-1.5 flex flex-wrap gap-2 text-[11px]">
                     {savingId === r.id ? (

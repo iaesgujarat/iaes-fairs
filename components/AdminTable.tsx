@@ -7,6 +7,7 @@ import { StatusBadge, REGISTRATION_STATUS_LABELS } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatINR, formatUSD, formatDateShort } from "@/lib/utils";
+import { PRICING_TIER_LABELS, PRICING_TIER_BADGE_LABELS } from "@/lib/pricing";
 import type {
   Registration,
   Fair,
@@ -179,9 +180,9 @@ export function AdminTable({ rows }: { rows: Row[] }) {
           }
         >
           <option value="all">All tiers</option>
-          <option value="EARLYBIRD">Early Bird</option>
-          <option value="STANDARD">Standard</option>
-          <option value="PREMIUM">Premium</option>
+          <option value="EARLYBIRD">{PRICING_TIER_LABELS.EARLYBIRD}</option>
+          <option value="STANDARD">{PRICING_TIER_LABELS.STANDARD}</option>
+          <option value="PREMIUM">{PRICING_TIER_LABELS.PREMIUM}</option>
           <option value="LOGO_PENDING">⏳ Logo pending</option>
         </select>
         <select
@@ -282,11 +283,7 @@ export function AdminTable({ rows }: { rows: Row[] }) {
                             : "rounded-full bg-navy/10 px-1.5 py-0.5 text-[10px] font-semibold text-navy/70"
                         }
                       >
-                        {r.pricing_tier === "PREMIUM"
-                          ? "💎 PREMIUM"
-                          : r.pricing_tier === "EARLYBIRD"
-                          ? "EARLY BIRD"
-                          : "STANDARD"}
+                        {PRICING_TIER_BADGE_LABELS[r.pricing_tier]}
                       </span>
                       {r.pricing_tier === "PREMIUM" &&
                         (r.backdrop_received ? (

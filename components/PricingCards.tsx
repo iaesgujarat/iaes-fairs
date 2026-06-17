@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getActivePricingState, getFairPricing } from "@/lib/pricing";
+import {
+  getActivePricingState,
+  getFairPricing,
+  PRICING_TIER_BADGE_LABELS,
+} from "@/lib/pricing";
 import { formatUSD } from "@/lib/utils";
 import type { Fair, PricingTier } from "@/types";
 
@@ -100,7 +104,7 @@ export function PricingCards({
             }`}
           >
             <span className="mb-3 inline-flex items-center rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-bold text-navy">
-              ⭐ EARLY BIRD
+              {PRICING_TIER_BADGE_LABELS.EARLYBIRD}
             </span>
             <p className="text-2xl font-bold">
               {formatUSD(pricing.earlybirdUSD ?? pricing.standardUSD)}
@@ -148,7 +152,7 @@ export function PricingCards({
           >
             {state.standardIsPassive
               ? `Opens ${fmtDate(fair.earlybird_deadline)}`
-              : "STANDARD"}
+              : PRICING_TIER_BADGE_LABELS.STANDARD}
           </span>
           <p
             className={`text-2xl font-bold ${
@@ -180,7 +184,7 @@ export function PricingCards({
             }`}
           >
             <span className="mb-3 inline-flex items-center rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-bold text-navy">
-              💎 PREMIUM
+              {PRICING_TIER_BADGE_LABELS.PREMIUM}
             </span>
             <p
               className={`text-2xl font-bold ${

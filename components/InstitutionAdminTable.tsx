@@ -22,6 +22,12 @@ const STATUSES: (InstitutionStatus | "all")[] = [
   "cancelled",
 ];
 
+const STATUS_LABELS: Record<InstitutionStatus, string> = {
+  registered: "Registered",
+  confirmed: "Confirmed",
+  cancelled: "Cancelled",
+};
+
 export function InstitutionAdminTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -97,7 +103,7 @@ export function InstitutionAdminTable({ rows }: { rows: Row[] }) {
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "All statuses" : s}
+              {s === "all" ? "All statuses" : STATUS_LABELS[s]}
             </option>
           ))}
         </select>
@@ -228,7 +234,7 @@ function StatusPill({ status }: { status: InstitutionStatus }) {
     <span
       className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${palette[status]}`}
     >
-      {status}
+      {STATUS_LABELS[status]}
     </span>
   );
 }
