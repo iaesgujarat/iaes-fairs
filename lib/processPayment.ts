@@ -195,6 +195,8 @@ async function sendConfirmation(
       )
       .eq("fair_id", fair.id)
       .eq("is_public", true)
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: false })
       .order("sort_order", { ascending: true });
     const itinerary = (stopRows ?? []).map((s) => ({
       date: new Date(s.event_date as string).toLocaleDateString("en-IN", {

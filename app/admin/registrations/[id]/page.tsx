@@ -87,6 +87,8 @@ export default async function AdminRegistrationPage({
     .select("*")
     .eq("fair_id", reg.fair_id)
     .eq("is_public", true)
+    .order("event_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
     .order("sort_order", { ascending: true });
   const stops = (stopRows as FairItineraryStop[] | null) ?? [];
   const { data: optRows } = await supabase

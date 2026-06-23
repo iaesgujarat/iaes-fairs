@@ -45,12 +45,12 @@ export function ItineraryBlockPDF({
     <View style={s.section} wrap={false}>
       <Text style={s.heading}>Tour Itinerary</Text>
 
-      {stops.map((stop) => {
+      {stops.map((stop, i) => {
         const time = itineraryTimeRange(stop);
         return (
           <View style={s.row} key={stop.id}>
             <Text style={s.day}>
-              Day {stop.day_number} · {formatDateShort(stop.event_date)}
+              Day {i + 1} · {formatDateShort(stop.event_date)}
             </Text>
             <Text style={s.venue}>
               {stop.institution_name ?? stop.venue_name}

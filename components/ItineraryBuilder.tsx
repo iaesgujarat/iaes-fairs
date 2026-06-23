@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { ITINERARY_EVENT_LABELS } from "@/lib/itinerary";
+import { ITINERARY_EVENT_LABELS, sortStopsChronological } from "@/lib/itinerary";
 import type { FairItineraryStop, ItineraryEventType } from "@/types";
 
 interface Props {
@@ -50,12 +50,13 @@ const NULLABLE = new Set([
 ]);
 
 export function ItineraryBuilder({ fairId, initialStops }: Props) {
-  const [stops, setStops] = useState<FairItineraryStop[]>(initialStops);
+  const [stops, setStops] = useState<FairItineraryStop[]>(
+    sortStopsChronological(initialStops)
+  );
   const [meta, setMeta] = useState<Record<string, Meta>>({});
   const [adding, setAdding] = useState<ItineraryEventType | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
-  const [reordering, setReordering] = useState(false);
 
   // Last server-persisted snapshot per stop id — drives "did this change?".
   const saved = useRef<Record<string, FairItineraryStop>>(
@@ -119,7 +120,11 @@ export function ItineraryBuilder({ fairId, initialStops }: Props) {
     try {
       const updated = await sendPatch(id, { [key]: value });
       saved.current[id] = updated;
-      setLocal(id, updated);
+      // Re-sort so an edited date/time slots the stop into chronological
+      // order immediately (other field edits leave the order unchanged).
+      setStops((prev) =>
+        sortStopsChronological(prev.map((s) => (s.id === id ? updated : s)))
+      );
       flashSaved(id);
     } catch (e) {
       patchMeta(id, {
@@ -187,7 +192,7 @@ export function ItineraryBuilder({ fairId, initialStops }: Props) {
       if (!res.ok) throw new Error(data?.error || "Could not add stop.");
       const stop = data.stop as FairItineraryStop;
       saved.current[stop.id] = stop;
-      setStops((prev) => [...prev, stop]);
+      setStops((prev) => sortStopsChronological([...prev, stop]));
     } catch (e) {
       setTopError(e instanceof Error ? e.message : "Could not add stop.");
     } finally {
@@ -212,48 +217,6 @@ export function ItineraryBuilder({ fairId, initialStops }: Props) {
         saving: false,
         error: e instanceof Error ? e.message : "Delete failed.",
       });
-    }
-  }
-
-  async function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= stops.length) return;
-    const before = stops;
-    const next = [...stops];
-    [next[index], next[target]] = [next[target], next[index]];
-    const renumbered = next.map((s, i) => ({
-      ...s,
-      day_number: i + 1,
-      sort_order: i + 1,
-    }));
-    setStops(renumbered);
-    setReordering(true);
-    setTopError(null);
-    try {
-      const res = await fetch(
-        `/api/admin/fairs/${fairId}/itinerary/reorder`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderedIds: renumbered.map((s) => s.id) }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Reorder failed.");
-      for (const s of renumbered) {
-        if (saved.current[s.id]) {
-          saved.current[s.id] = {
-            ...saved.current[s.id],
-            day_number: s.day_number,
-            sort_order: s.sort_order,
-          };
-        }
-      }
-    } catch (e) {
-      setStops(before);
-      setTopError(e instanceof Error ? e.message : "Reorder failed.");
-    } finally {
-      setReordering(false);
     }
   }
 
@@ -298,29 +261,9 @@ export function ItineraryBuilder({ fairId, initialStops }: Props) {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        aria-label="Move up"
-                        disabled={index === 0 || reordering}
-                        onClick={() => move(index, -1)}
-                        className="text-navy/40 hover:text-navy disabled:opacity-30"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="Move down"
-                        disabled={index === stops.length - 1 || reordering}
-                        onClick={() => move(index, 1)}
-                        className="text-navy/40 hover:text-navy disabled:opacity-30"
-                      >
-                        ▼
-                      </button>
-                    </div>
                     <div>
                       <p className="font-serif text-base font-semibold text-navy">
-                        Day {stop.day_number} — {headerDate(stop.event_date)}
+                        Day {index + 1} — {headerDate(stop.event_date)}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="text-xs uppercase tracking-wider text-navy/55">

@@ -98,6 +98,8 @@ export default async function FairControlPanel({
       .from("fair_itinerary")
       .select("*")
       .eq("fair_id", params.fairId)
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: false })
       .order("sort_order", { ascending: true }),
     supabase
       .from("premium_slot_status")
@@ -492,13 +494,13 @@ export default async function FairControlPanel({
           ) : (
             <>
               <ul className="mt-3 divide-y divide-navy/5 text-sm">
-                {itineraryStops.map((s) => (
+                {itineraryStops.map((s, i) => (
                   <li
                     key={s.id}
                     className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
                   >
                     <span className="w-28 shrink-0 text-xs text-navy/55">
-                      Day {s.day_number} · {formatDateShort(s.event_date)}
+                      Day {i + 1} · {formatDateShort(s.event_date)}
                     </span>
                     <span className="flex-1 text-navy/85">
                       {s.institution_name ?? s.venue_name ?? "—"}

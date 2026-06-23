@@ -37,6 +37,8 @@ export default async function EditFairPage({
     .from("fair_itinerary")
     .select("*")
     .eq("fair_id", params.fairId)
+    .order("event_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
     .order("sort_order", { ascending: true });
   const stops = (stopsData as FairItineraryStop[] | null) ?? [];
 
@@ -118,7 +120,8 @@ export default async function EditFairPage({
           <p className="mt-1 text-sm text-navy/60">
             The single source of truth for tour stops — the landing page,
             invoices and the briefing email all read from this. Field edits
-            save on blur; toggles and reorder save immediately.
+            save on blur; toggles save immediately. Stops sort automatically
+            by date and start time, so add them in any order.
           </p>
           <div className="mt-6">
             <ItineraryBuilder fairId={f.id} initialStops={stops} />

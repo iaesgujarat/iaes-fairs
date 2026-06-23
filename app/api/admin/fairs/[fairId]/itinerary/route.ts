@@ -40,6 +40,8 @@ export async function GET(
     .from("fair_itinerary")
     .select("*")
     .eq("fair_id", params.fairId)
+    .order("event_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
     .order("sort_order", { ascending: true });
 
   if (error) {

@@ -68,7 +68,7 @@ export function EventOptinEditor({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        {stops.map((s) => {
+        {stops.map((s, i) => {
           const when = new Date(s.event_date).toLocaleDateString("en-IN", {
             day: "numeric",
             month: "short",
@@ -88,7 +88,7 @@ export function EventOptinEditor({
               />
               <span>
                 <span className="font-medium text-navy">
-                  Day {s.day_number} · {when} — {place}
+                  Day {i + 1} · {when} — {place}
                 </span>
                 {!s.is_confirmed && (
                   <span className="ml-2 rounded-full border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700">
