@@ -10,6 +10,7 @@ interface Props {
   totalUniversities: number;
   portalLink: string;
   portalExpiresAt: string;
+  surveyLink: string;
 }
 
 export function UniversityThankYouEmail({
@@ -22,6 +23,7 @@ export function UniversityThankYouEmail({
   totalUniversities,
   portalLink,
   portalExpiresAt,
+  surveyLink,
 }: Props) {
   return (
     <div
@@ -173,6 +175,47 @@ export function UniversityThankYouEmail({
                   }}
                 >
                   View Your Student Leads &rarr;
+                </a>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "16px 20px",
+                  border: "1px solid #E1E6EF",
+                  borderRadius: 8,
+                  textAlign: "center",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+                  How did the fair go for you?
+                </p>
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 13,
+                    color: "#6F7B8F",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Two minutes of honest feedback helps us make the next IAES
+                  fair better for you.
+                </p>
+                <a
+                  href={surveyLink}
+                  style={{
+                    display: "inline-block",
+                    marginTop: 12,
+                    border: "1px solid #0B2B5C",
+                    color: "#0B2B5C",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    padding: "10px 22px",
+                    borderRadius: 6,
+                  }}
+                >
+                  Share Your Feedback &rarr;
                 </a>
               </div>
 

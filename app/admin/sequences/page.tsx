@@ -100,6 +100,12 @@ export default async function SequencesPage() {
                 Subscribers
               </Link>
               <Link
+                href="/admin/feedback"
+                className="text-navy/65 hover:text-navy"
+              >
+                Feedback
+              </Link>
+              <Link
                 href="/admin/sequences"
                 className="font-medium text-navy underline-offset-4"
               >

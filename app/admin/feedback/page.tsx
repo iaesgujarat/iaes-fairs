@@ -3,18 +3,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SignOutButton } from "@/components/SignOutButton";
-import { SubscribersManager } from "@/components/admin/SubscribersManager";
-import type { AnnouncementLead } from "@/types";
+import { FeedbackManager } from "@/components/admin/FeedbackManager";
+import type { FairFeedback } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function SubscribersPage() {
+export default async function FeedbackPage() {
   const session = await createClient().auth.getUser();
   const userEmail = session.data.user?.email || "Admin";
 
   const supabase = createAdminClient();
-  const { data: leads } = await supabase
-    .from("announcement_leads")
+  const { data: feedback } = await supabase
+    .from("fair_feedback")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -38,21 +38,18 @@ export default async function SubscribersPage() {
               >
                 Registrations
               </Link>
-              <Link
-                href="/admin/fairs"
-                className="text-navy/65 hover:text-navy"
-              >
+              <Link href="/admin/fairs" className="text-navy/65 hover:text-navy">
                 Fairs
               </Link>
               <Link
                 href="/admin/subscribers"
-                className="font-medium text-navy underline-offset-4"
+                className="text-navy/65 hover:text-navy"
               >
                 Subscribers
               </Link>
               <Link
                 href="/admin/feedback"
-                className="text-navy/65 hover:text-navy"
+                className="font-medium text-navy underline-offset-4"
               >
                 Feedback
               </Link>
@@ -74,19 +71,16 @@ export default async function SubscribersPage() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-semibold text-navy">
-            Subscribers
+            Fair feedback
           </h1>
           <p className="mt-1 text-sm text-navy/60">
-            People who used the website&rsquo;s &ldquo;Keep me posted&rdquo;
-            form to hear about future fairs. Universities tell us when they
-            like to travel; students tell us where they want to study — use
-            this to plan and announce upcoming fairs.
+            Post-fair survey responses from university reps. Each rep gets the
+            survey link in their thank-you email when a fair concludes — use
+            this to see what worked and what to improve for the next one.
           </p>
         </div>
 
-        <SubscribersManager
-          initialLeads={(leads as AnnouncementLead[]) || []}
-        />
+        <FeedbackManager initial={(feedback as FairFeedback[]) || []} />
       </main>
 
       <SiteFooter />

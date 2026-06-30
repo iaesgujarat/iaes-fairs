@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getResend } from "@/lib/resend";
 import { appUrl } from "@/lib/mailerHelpers";
+import { buildStudentCsv } from "@/lib/studentCsv";
 import { canTransition } from "@/lib/fairStatus";
 import { UniversityThankYouEmail } from "@/emails/UniversityThankYouEmail";
 import { StudentThankYouEmail } from "@/emails/StudentThankYouEmail";
@@ -194,6 +195,16 @@ async function sendUniversityThankYouEmails(
             .eq("interested", true),
         ]);
 
+      // Attach the rep's own consent-filtered leads CSV directly — saves
+      // them the portal-download round trip. Portal link stays as a
+      // fallback. Skip a header-only file (no consented leads) — an empty
+      // attachment reads as a bug; the portal link still covers them.
+      const leadsCsv = await buildStudentCsv(
+        supabase,
+        reg.id,
+        reg.university_name
+      );
+
       await resend.emails.send({
         from: THANKYOU_FROM,
         replyTo: THANKYOU_REPLY_TO,
@@ -209,7 +220,17 @@ async function sendUniversityThankYouEmails(
           totalUniversities,
           portalLink: `${appUrl()}/portal/${reg.id}/students`,
           portalExpiresAt,
+          surveyLink: `${appUrl()}/survey/${reg.id}`,
         }),
+        attachments:
+          leadsCsv.rowCount > 0
+            ? [
+                {
+                  filename: leadsCsv.filename,
+                  content: Buffer.from(leadsCsv.csv, "utf-8"),
+                },
+              ]
+            : undefined,
       });
     } catch (err) {
       console.error(

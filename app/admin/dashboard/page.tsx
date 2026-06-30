@@ -121,6 +121,12 @@ export default async function AdminDashboardPage({
                 Subscribers
               </Link>
               <Link
+                href="/admin/feedback"
+                className="text-navy/65 hover:text-navy"
+              >
+                Feedback
+              </Link>
+              <Link
                 href="/admin/sequences"
                 className="text-navy/65 hover:text-navy"
               >

@@ -203,6 +203,25 @@ export interface AnnouncementLead {
   last_seen_at: string;
 }
 
+// v23 — post-fair university feedback survey (fair_feedback)
+export interface FairFeedback {
+  id: string;
+  registration_id: string;
+  fair_id: string | null;
+  university_name: string | null;
+  contact_name: string | null;
+  fair_name: string | null;
+  overall_rating: number | null;
+  leads_rating: number | null;
+  organization_rating: number | null;
+  recommend_rating: number | null;
+  what_went_well: string | null;
+  what_to_improve: string | null;
+  additional_comments: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ---------- v7: booth pricing ----------
 export interface BoothConfig {
   totalTables: number;

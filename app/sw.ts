@@ -4,7 +4,7 @@
 //
 // THE ONE RULE THIS FILE EXISTS TO ENFORCE:
 //   NEVER cache /api, /admin, /auth, /payment, /invoice, /confirmation,
-//   /portal, /scan, /checkin. Stale data on those paths means money
+//   /portal, /survey, /scan, /checkin. Stale data on those paths means money
 //   disputes, leaked auth state, or fake "checked-in" / "paid" UI.
 //
 // Everything else is conservatively cached:
@@ -38,6 +38,7 @@ const NEVER_CACHE: RegExp[] = [
   /^\/invoice\//,
   /^\/confirmation\//,
   /^\/portal\//,
+  /^\/survey(\/|$)/,
   /^\/scan(\/|$)/,
   /^\/checkin(\/|$)/,
 ];
