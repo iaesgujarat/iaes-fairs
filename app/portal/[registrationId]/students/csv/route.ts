@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasPortalAccess } from "@/lib/portalAccess";
+import { hasSuccessfulPayment } from "@/lib/registrationPayment";
 import { buildStudentCsv } from "@/lib/studentCsv";
 
 export const runtime = "nodejs";
@@ -47,6 +48,15 @@ export async function GET(
     return NextResponse.json(
       { error: "Locked. Open the portal page and enter the access code." },
       { status: 401 }
+    );
+  }
+
+  // Strict payment gate: leads are a paid deliverable. Access code alone
+  // (last-4 of phone) is self-knowledge, not proof of payment.
+  if (!(await hasSuccessfulPayment(supabase, params.registrationId))) {
+    return NextResponse.json(
+      { error: "Leads unlock once your payment is received." },
+      { status: 403 }
     );
   }
 

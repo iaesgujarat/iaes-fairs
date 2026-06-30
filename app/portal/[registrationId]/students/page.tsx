@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { PortalStudents } from "@/components/PortalStudents";
 import { PortalGate } from "@/components/PortalGate";
 import { hasPortalAccess } from "@/lib/portalAccess";
+import { hasSuccessfulPayment } from "@/lib/registrationPayment";
 import { formatDateLong } from "@/lib/mailerHelpers";
 
 export const dynamic = "force-dynamic";
@@ -124,6 +125,44 @@ export default async function PortalStudentsPage({
             universityName={r.university_name}
             fairName={fair.name}
           />
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
+  // Strict payment gate: leads are a paid deliverable. Passing the
+  // last-4-phone access challenge proves identity, not payment — so an
+  // unpaid (e.g. soft-confirmed or admin-set-confirmed) rep who reaches
+  // this page sees a "payment pending" notice, never the student data.
+  if (!(await hasSuccessfulPayment(supabase, params.registrationId))) {
+    return (
+      <>
+        <SiteHeader variant="light" />
+        <main className="mx-auto max-w-2xl px-6 py-20 text-center">
+          <h1 className="font-serif text-3xl font-semibold text-navy">
+            Leads unlock once payment is received
+          </h1>
+          <p className="mt-3 text-navy/70">
+            Your student leads for {fair.name} will appear here as soon as
+            your payment is confirmed.
+          </p>
+          <p className="mt-3 text-sm text-navy/60">
+            Already paid or have a question? Contact{" "}
+            <a
+              href="mailto:eduadviser@iaesgujarat.org"
+              className="text-gold-600 hover:underline"
+            >
+              eduadviser@iaesgujarat.org
+            </a>
+            .
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block text-sm text-navy hover:text-gold-600"
+          >
+            &larr; Back to home
+          </Link>
         </main>
         <SiteFooter />
       </>

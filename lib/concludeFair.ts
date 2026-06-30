@@ -167,7 +167,27 @@ async function sendUniversityThankYouEmails(
     .eq("fair_id", fair.id)
     .eq("status", "confirmed");
 
-  const regs = (data as RegRow[] | null) ?? [];
+  const confirmedRegs = (data as RegRow[] | null) ?? [];
+  if (confirmedRegs.length === 0) return;
+
+  // Strict "paid in full" gate: a `confirmed` status alone is not proof of
+  // payment (an admin can set it manually). The survey link and the leads
+  // CSV — both fair deliverables — only go to reps with a genuinely
+  // successful payment on record. No success payment → no email at all.
+  const { data: paidRows } = await supabase
+    .from("payments")
+    .select("registration_id")
+    .eq("payment_status", "success")
+    .in(
+      "registration_id",
+      confirmedRegs.map((r) => r.id)
+    );
+  const paidRegIds = new Set(
+    ((paidRows as { registration_id: string }[] | null) ?? []).map(
+      (p) => p.registration_id
+    )
+  );
+  const regs = confirmedRegs.filter((r) => paidRegIds.has(r.id));
   if (regs.length === 0) return;
 
   const resend = getResend();
