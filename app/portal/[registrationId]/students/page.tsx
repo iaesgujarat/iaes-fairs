@@ -5,6 +5,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PortalStudents } from "@/components/PortalStudents";
+import {
+  PortalEventRosters,
+  type EventRoster,
+  type RosterStudent,
+} from "@/components/PortalEventRosters";
 import { PortalGate } from "@/components/PortalGate";
 import { hasPortalAccess } from "@/lib/portalAccess";
 import { hasSuccessfulPayment } from "@/lib/registrationPayment";
@@ -250,6 +255,103 @@ export default async function PortalStudentsPage({
 
   const interestedCount = list.filter((s) => s.interested).length;
 
+  // v24 — full registered-student roster for each event this university is
+  // attending (registration_event_optin). Consent-filtered (only students
+  // who agreed to share); the page is already payment-gated above.
+  const { data: optinData } = await supabase
+    .from("registration_event_optin")
+    .select("itinerary_stop_id")
+    .eq("registration_id", r.id);
+  const stopIds = (
+    (optinData as { itinerary_stop_id: string }[] | null) ?? []
+  ).map((o) => o.itinerary_stop_id);
+
+  let eventRosters: EventRoster[] = [];
+  if (stopIds.length > 0) {
+    interface RosterPass {
+      pass_number: string | null;
+      full_name: string;
+      institution_name: string | null;
+      current_course: string | null;
+      current_semester: string | null;
+      english_exam: string | null;
+      budget_range: string | null;
+      field_of_interest: string[] | null;
+      preferred_countries: string[] | null;
+      whatsapp_consent: boolean;
+      email_consent: boolean;
+      data_sharing_consent: boolean;
+      phone: string | null;
+      email: string | null;
+    }
+    interface StopMeta {
+      id: string;
+      event_date: string;
+      event_type: string;
+      institution_name: string | null;
+      venue_name: string | null;
+      sort_order: number;
+    }
+    interface SERow {
+      itinerary_stop_id: string;
+      checked_in_at: string | null;
+      pass: RosterPass | RosterPass[] | null;
+    }
+
+    const [{ data: stopRows }, { data: seRows }] = await Promise.all([
+      supabase
+        .from("fair_itinerary")
+        .select(
+          "id, event_date, event_type, institution_name, venue_name, sort_order"
+        )
+        .in("id", stopIds),
+      supabase
+        .from("student_event")
+        .select(
+          `itinerary_stop_id, checked_in_at,
+           pass:fair_student_passes(pass_number, full_name, institution_name,
+             current_course, current_semester, english_exam, budget_range,
+             field_of_interest, preferred_countries, whatsapp_consent,
+             email_consent, data_sharing_consent, phone, email)`
+        )
+        .in("itinerary_stop_id", stopIds),
+    ]);
+
+    const byStop = new Map<string, RosterStudent[]>();
+    for (const row of (seRows as SERow[] | null) ?? []) {
+      const pp = Array.isArray(row.pass) ? row.pass[0] : row.pass;
+      if (!pp || !pp.data_sharing_consent) continue;
+      const arr = byStop.get(row.itinerary_stop_id) ?? [];
+      arr.push({
+        passNumber: pp.pass_number,
+        fullName: pp.full_name,
+        institution: pp.institution_name,
+        course: pp.current_course,
+        semester: pp.current_semester,
+        fields: pp.field_of_interest || [],
+        countries: pp.preferred_countries || [],
+        budget: pp.budget_range,
+        english: pp.english_exam,
+        email: pp.email_consent ? pp.email : null,
+        phone: pp.whatsapp_consent ? pp.phone : null,
+        checkedIn: !!row.checked_in_at,
+      });
+      byStop.set(row.itinerary_stop_id, arr);
+    }
+
+    eventRosters = ((stopRows as StopMeta[] | null) ?? [])
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((s) => ({
+        stopId: s.id,
+        label:
+          s.event_type === "OPEN_FAIR"
+            ? s.venue_name || "Open Fair"
+            : s.institution_name || s.venue_name || "Campus visit",
+        dateLabel: formatDateLong(s.event_date),
+        students: byStop.get(s.id) ?? [],
+      }));
+  }
+
   return (
     <>
       <SiteHeader variant="light" />
@@ -295,6 +397,8 @@ export default async function PortalStudentsPage({
           students={list}
           downloadHref={`/portal/${r.id}/students/csv`}
         />
+
+        <PortalEventRosters rosters={eventRosters} />
       </main>
       <SiteFooter />
     </>

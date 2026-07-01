@@ -17,6 +17,14 @@ interface CheckinResult {
   fairName?: string;
   fairStatus?: string | null;
   checkedInAt?: string | null;
+  eventName?: string;
+}
+
+interface CheckinEvent {
+  id: string;
+  label: string;
+  date: string;
+  type: string;
 }
 
 export default function CheckinPage() {
@@ -28,6 +36,8 @@ export default function CheckinPage() {
   const [result, setResult] = useState<CheckinResult | null>(null);
   const [manual, setManual] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
+  const [events, setEvents] = useState<CheckinEvent[]>([]);
+  const [selectedStopId, setSelectedStopId] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -38,6 +48,33 @@ export default function CheckinPage() {
     }
   }, []);
 
+  // v24 — load the active fair's events once we have a PIN, so the door
+  // staff can pick which day/event they're checking in for. Defaults to
+  // today's event (IST). If this fails or there are no events, check-in
+  // falls back to the legacy fair-level flag.
+  useEffect(() => {
+    if (!pin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/checkin/events", {
+          headers: { Authorization: `Bearer ${pin}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const list: CheckinEvent[] = data.events || [];
+        setEvents(list);
+        setSelectedStopId(data.suggestedStopId || list[0]?.id || "");
+      } catch {
+        /* ignore — legacy check-in still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pin]);
+
   async function checkin(passUuid: string) {
     if (!pin) return;
     setBusy(true);
@@ -46,7 +83,11 @@ export default function CheckinPage() {
     try {
       const res = await fetch(`/api/checkin/${passUuid}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${pin}` },
+        headers: {
+          Authorization: `Bearer ${pin}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(selectedStopId ? { stopId: selectedStopId } : {}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -220,6 +261,11 @@ export default function CheckinPage() {
             <p className="mt-1 text-sm text-navy/70">
               {result.institutionName}
             </p>
+            {result.eventName && (
+              <p className="mt-3 inline-block rounded-full bg-navy/5 px-3 py-1 text-xs font-medium text-navy/70">
+                {result.eventName}
+              </p>
+            )}
             <p className="mt-4 font-mono text-sm font-semibold tracking-wide text-navy">
               {result.passNumber}
             </p>
@@ -280,6 +326,29 @@ export default function CheckinPage() {
             Change PIN
           </button>
         </div>
+
+        {events.length > 0 && (
+          <div className="mt-6 rounded-xl border border-white/15 bg-white/5 p-4">
+            <label className="text-xs uppercase tracking-wider text-white/55">
+              Checking in for
+            </label>
+            <select
+              value={selectedStopId}
+              onChange={(e) => setSelectedStopId(e.target.value)}
+              className="mt-2 w-full rounded-md border border-white/20 bg-navy px-3 py-2 text-sm text-white focus:border-gold focus:outline-none"
+            >
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id} className="text-navy">
+                  {ev.label} ·{" "}
+                  {new Date(ev.date).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                  })}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="mt-6 rounded-2xl bg-white p-4 text-navy shadow-xl">
           {busy ? (

@@ -18,7 +18,25 @@ import {
 } from "@/lib/schemas";
 import type { Fair } from "@/types";
 
-export function StudentRegisterForm({ fair }: { fair: Fair }) {
+/**
+ * v24 — optional event context. When present, the form registers the
+ * student against a specific itinerary stop (campus visit / open fair).
+ * `lockedInstitution` bakes the host-institution identity in (readonly);
+ * `openFair` shows the "I'll also attend the Open Fair" checkbox.
+ */
+export interface EventContext {
+  stopId: string;
+  lockedInstitution?: string | null;
+  openFair?: { label: string } | null;
+}
+
+export function StudentRegisterForm({
+  fair,
+  eventContext,
+}: {
+  fair: Fair;
+  eventContext?: EventContext;
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -37,6 +55,9 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
     resolver: zodResolver(studentPassSchema),
     defaultValues: {
       fair_id: fair.id,
+      itinerary_stop_id: eventContext?.stopId,
+      institution_name: eventContext?.lockedInstitution || undefined,
+      also_open_fair: false,
       field_of_interest: [],
       preferred_countries: [],
       whatsapp_consent: false,
@@ -45,6 +66,9 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
     },
     mode: "onTouched",
   });
+
+  const alsoOpenFair = watch("also_open_fair");
+  const institutionLocked = !!eventContext?.lockedInstitution;
 
   const fields = watch("field_of_interest") || [];
   const countries = watch("preferred_countries") || [];
@@ -127,6 +151,9 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <input type="hidden" {...register("fair_id")} />
+      {eventContext && (
+        <input type="hidden" {...register("itinerary_stop_id")} />
+      )}
 
       <Input
         label="Full Name"
@@ -156,6 +183,12 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
       <Input
         label="Institution Name"
         required
+        readOnly={institutionLocked}
+        hint={
+          institutionLocked
+            ? "Set by the event you're registering for"
+            : undefined
+        }
         placeholder="Gujarat University"
         error={errors.institution_name?.message}
         {...register("institution_name")}
@@ -222,6 +255,24 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
         error={errors.preferred_countries?.message as string | undefined}
       />
 
+      {eventContext?.openFair && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gold-500/40 bg-gold-500/[0.06] p-4 text-sm text-navy">
+          <input
+            type="checkbox"
+            checked={!!alsoOpenFair}
+            onChange={(e) => setValue("also_open_fair", e.target.checked)}
+            className="mt-1 accent-navy"
+          />
+          <span>
+            I&rsquo;ll also attend the {eventContext.openFair.label}
+            <span className="block text-xs text-navy/55">
+              Can&rsquo;t make this campus day, or want to meet more
+              university reps? Add the public Open Fair to your pass too.
+            </span>
+          </span>
+        </label>
+      )}
+
       <fieldset className="space-y-3 rounded-md border border-navy/10 bg-cream/40 p-5">
         <legend className="px-1 text-sm font-medium text-navy">Consents</legend>
         <ConsentRow
@@ -237,8 +288,16 @@ export function StudentRegisterForm({ fair }: { fair: Fair }) {
         <ConsentRow
           checked={!!dataSharingConsent}
           onChange={(v) => setValue("data_sharing_consent", v)}
-          label="I agree to share my profile with participating US universities"
-          hint="Required for universities to see your contact details when they scan your pass."
+          label={
+            eventContext
+              ? "I agree to share my profile with the universities attending this event"
+              : "I agree to share my profile with participating US universities"
+          }
+          hint={
+            eventContext
+              ? "Lets the attending university representatives connect with you. Leave unticked to still register and get a pass, without being on the shared roster."
+              : "Required for universities to see your contact details when they scan your pass."
+          }
         />
       </fieldset>
 

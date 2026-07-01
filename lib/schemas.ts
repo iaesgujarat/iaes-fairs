@@ -444,6 +444,12 @@ export const STUDENT_COUNTRY_OPTIONS = [
 
 export const studentPassSchema = z.object({
   fair_id: z.uuid({ error: "Missing fair selection." }),
+  // v24 — per-event registration. When the student registers via a
+  // campus link, this is the itinerary stop they're signing up for; the
+  // server validates it belongs to the fair. `also_open_fair` adds a
+  // second signup for the fair's public Open Fair stop.
+  itinerary_stop_id: z.uuid().optional(),
+  also_open_fair: z.boolean().optional(),
   full_name: z.string().min(2, "Full name is required.").max(120),
   email: z.email("Please enter a valid email address."),
   phone: z.string().min(6, "Phone number is required.").max(40),

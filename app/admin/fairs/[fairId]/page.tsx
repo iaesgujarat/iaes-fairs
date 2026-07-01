@@ -534,6 +534,12 @@ export default async function FairControlPanel({
                   update before announcing.
                 </p>
               )}
+              <Link
+                href={`/admin/fairs/${f.id}/events`}
+                className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold-600"
+              >
+                Per-event registration links &amp; rosters →
+              </Link>
             </>
           )}
         </div>

@@ -13,6 +13,73 @@ import type { Fair } from "@/types";
 
 export const runtime = "nodejs";
 
+interface StopRow {
+  id: string;
+  fair_id: string;
+  event_type: string;
+  institution_name: string | null;
+}
+
+/**
+ * v24 — record which event(s) a student signed up for. Called after the
+ * pass exists (new or returning). Idempotent: a returning student who
+ * re-uses the campus link keeps their existing row (and any check-in);
+ * we never overwrite checked_in_at. Best-effort at the call site.
+ */
+async function recordEventSignups(
+  supabase: ReturnType<typeof createAdminClient>,
+  passUuid: string,
+  fairId: string,
+  stop: StopRow | null,
+  alsoOpenFair: boolean
+): Promise<void> {
+  const rows: {
+    pass_uuid: string;
+    itinerary_stop_id: string;
+    fair_id: string;
+    source: string;
+  }[] = [];
+
+  if (stop) {
+    rows.push({
+      pass_uuid: passUuid,
+      itinerary_stop_id: stop.id,
+      fair_id: fairId,
+      source: stop.event_type === "OPEN_FAIR" ? "open_fair_form" : "campus_form",
+    });
+  }
+
+  // "Also attend the Open Fair" — skip if the student already signed up
+  // via the open-fair link itself.
+  if (alsoOpenFair && (!stop || stop.event_type !== "OPEN_FAIR")) {
+    const { data: openStop } = await supabase
+      .from("fair_itinerary")
+      .select("id")
+      .eq("fair_id", fairId)
+      .eq("event_type", "OPEN_FAIR")
+      .eq("is_public", true)
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (openStop) {
+      rows.push({
+        pass_uuid: passUuid,
+        itinerary_stop_id: (openStop as { id: string }).id,
+        fair_id: fairId,
+        source: "open_fair_checkbox",
+      });
+    }
+  }
+
+  if (rows.length === 0) return;
+  await supabase
+    .from("student_event")
+    .upsert(rows, {
+      onConflict: "pass_uuid,itinerary_stop_id",
+      ignoreDuplicates: true,
+    });
+}
+
 function appUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
@@ -113,6 +180,26 @@ export async function POST(req: Request) {
     );
   }
 
+  // v24 — resolve the event context (campus / open-fair link). The stop
+  // must belong to this fair. A campus visit FORCES the student's
+  // institution identity to the host institution — no ambiguity, even if
+  // the client tampers with the (locked) field.
+  let stop: StopRow | null = null;
+  if (input.itinerary_stop_id) {
+    const { data: stopData } = await supabase
+      .from("fair_itinerary")
+      .select("id, fair_id, event_type, institution_name")
+      .eq("id", input.itinerary_stop_id)
+      .maybeSingle();
+    if (stopData && (stopData as StopRow).fair_id === input.fair_id) {
+      stop = stopData as StopRow;
+    }
+  }
+  const institutionName =
+    stop && stop.event_type === "CAMPUS_VISIT" && stop.institution_name
+      ? stop.institution_name
+      : input.institution_name;
+
   // Duplicate (email, fair) → resend the existing pass, don't create a new one
   const { data: existing } = await supabase
     .from("fair_student_passes")
@@ -153,6 +240,20 @@ export async function POST(req: Request) {
       bodyParams: [existing.full_name, f.name, formatRange(f)],
       urlButtonParam: existing.pass_uuid,
     });
+    // v24 — a returning student re-using the campus link still gets
+    // recorded against this event (keeps existing rows / check-ins).
+    try {
+      await recordEventSignups(
+        supabase,
+        existing.pass_uuid,
+        f.id,
+        stop,
+        !!input.also_open_fair
+      );
+    } catch (e) {
+      console.error("Event signup (returning pass) failed:", e);
+    }
+
     return NextResponse.json({
       alreadyRegistered: true,
       passUuid: existing.pass_uuid,
@@ -167,7 +268,7 @@ export async function POST(req: Request) {
       full_name: input.full_name,
       email: input.email.toLowerCase(),
       phone: input.phone,
-      institution_name: input.institution_name,
+      institution_name: institutionName,
       current_course: input.current_course,
       current_semester: input.current_semester,
       english_exam: input.english_exam || null,
@@ -186,6 +287,20 @@ export async function POST(req: Request) {
       { error: insErr?.message || "Could not create pass." },
       { status: 500 }
     );
+  }
+
+  // v24 — record the event signup(s) right after the pass exists, before
+  // best-effort notifications, so a mail hiccup can't lose the signup.
+  try {
+    await recordEventSignups(
+      supabase,
+      pass.pass_uuid,
+      f.id,
+      stop,
+      !!input.also_open_fair
+    );
+  } catch (e) {
+    console.error("Event signup (new pass) failed:", e);
   }
 
   try {

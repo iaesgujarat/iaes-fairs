@@ -222,6 +222,17 @@ export interface FairFeedback {
   updated_at: string;
 }
 
+// v24 — per-event student registration + attendance (student_event)
+export interface StudentEvent {
+  id: string;
+  pass_uuid: string;
+  itinerary_stop_id: string;
+  fair_id: string | null;
+  source: string | null;
+  registered_at: string;
+  checked_in_at: string | null;
+}
+
 // ---------- v7: booth pricing ----------
 export interface BoothConfig {
   totalTables: number;
