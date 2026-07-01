@@ -27,6 +27,13 @@ function formatDate(dateStr: string): string {
 export function FairLanding({ fair }: { fair: Fair }) {
   const status = fair.status ?? "PUBLISHED";
 
+  // v24 — the public Open Fair stop backs the student pass CTA (its event
+  // form → roster); campus visits get a "via your institution" note.
+  const openFairStopId =
+    (fair.itinerary ?? []).find(
+      (s) => s.event_type === "OPEN_FAIR" && s.is_public
+    )?.id ?? null;
+
   return (
     <>
       <SiteHeader />
@@ -59,11 +66,12 @@ export function FairLanding({ fair }: { fair: Fair }) {
               stops={fair.itinerary}
               arriveBy={fair.arrive_by}
               departAfter={fair.depart_after}
+              showCampusRegistrationNote
             />
           </section>
         )}
 
-        <FairCTASection fair={fair} />
+        <FairCTASection fair={fair} openFairStopId={openFairStopId} />
       </main>
       <SiteFooter />
     </>

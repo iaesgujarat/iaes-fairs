@@ -20,10 +20,15 @@ export function FairItinerary({
   stops,
   arriveBy,
   departAfter,
+  showCampusRegistrationNote = false,
 }: {
   stops: FairItineraryStop[];
   arriveBy?: string | null;
   departAfter?: string | null;
+  // v24 — campus visits are for that institution's own students, who
+  // register via a link distributed by their institution (not a public
+  // button). Show a small note saying so, instead of a register link.
+  showCampusRegistrationNote?: boolean;
 }) {
   if (!stops.length) return null;
 
@@ -83,6 +88,14 @@ export function FairItinerary({
                       {stop.notes}
                     </p>
                   )}
+
+                  {showCampusRegistrationNote &&
+                    stop.event_type === "CAMPUS_VISIT" && (
+                      <p className="mt-1.5 text-xs font-medium text-navy/70">
+                        Students of this institution register through their
+                        institution.
+                      </p>
+                    )}
                 </div>
               </div>
 

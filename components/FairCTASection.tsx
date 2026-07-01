@@ -20,11 +20,23 @@ function formatINRPlain(amount: number): string {
  * + student pass). Extracted verbatim from the landing page so page.tsx
  * stays lean; behaviour is unchanged from v1–v11.
  */
-export function FairCTASection({ fair }: { fair: Fair }) {
+export function FairCTASection({
+  fair,
+  openFairStopId,
+}: {
+  fair: Fair;
+  // v24 — when the fair has a public Open Fair itinerary stop, the student
+  // pass CTA points at that event's form so the registration lands on the
+  // Open Fair roster + counts. Falls back to the generic /student form.
+  openFairStopId?: string | null;
+}) {
   const status = fair.status ?? "PUBLISHED";
   const pricing = getFairPricing(fair);
   const showUniInstCTAs = isRegistrationOpen(status);
   const showStudentCTA = isStudentPassOpen(status);
+  const studentHref = openFairStopId
+    ? `/student/event/${openFairStopId}`
+    : "/student";
 
   return (
     <section id="register" className="bg-[#F5F7FA] py-16 scroll-mt-20">
@@ -277,7 +289,7 @@ export function FairCTASection({ fair }: { fair: Fair }) {
               booth.
             </p>
             <Link
-              href="/student"
+              href={studentHref}
               className="mt-4 inline-flex items-center gap-2 rounded-md border border-gold bg-white px-6 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-gold/10"
             >
               Get My Free Pass <span aria-hidden>&rarr;</span>
