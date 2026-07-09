@@ -117,56 +117,7 @@ export function FairLifecycleActions({
     }
   }
 
-  function ConfirmModal({ action }: { action: ActionKind }) {
-    const prompt = PROMPTS[action];
-    const isCancel = action === "cancel";
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 px-4">
-        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
-          <h3 className="font-serif text-lg font-semibold text-navy">
-            {prompt.title}
-          </h3>
-          <p className="mt-2 text-sm text-navy/70">{prompt.body}</p>
-          {isCancel && (
-            <textarea
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Reason (required)"
-              rows={3}
-              className="mt-3 block w-full rounded-md border border-navy/15 bg-white px-3 py-2 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
-            />
-          )}
-          {error && (
-            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </p>
-          )}
-          <div className="mt-5 flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setConfirming(null);
-                setError(null);
-              }}
-              disabled={pending !== null}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant={isCancel ? "primary" : "gold"}
-              loading={pending === action}
-              disabled={isCancel && cancelReason.trim().length < 3}
-              onClick={() =>
-                run(action, isCancel ? { reason: cancelReason.trim() } : undefined)
-              }
-            >
-              {isCancel ? "Cancel fair" : "Confirm"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isCancel = confirming === "cancel";
 
   return (
     <div className="space-y-6">
@@ -328,7 +279,57 @@ export function FairLifecycleActions({
         </div>
       </div>
 
-      {confirming && <ConfirmModal action={confirming} />}
+      {confirming && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+            <h3 className="font-serif text-lg font-semibold text-navy">
+              {PROMPTS[confirming].title}
+            </h3>
+            <p className="mt-2 text-sm text-navy/70">
+              {PROMPTS[confirming].body}
+            </p>
+            {isCancel && (
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Reason (required)"
+                rows={3}
+                className="mt-3 block w-full rounded-md border border-navy/15 bg-white px-3 py-2 text-sm text-navy focus:border-navy focus:outline-none focus:ring-2 focus:ring-gold/30"
+              />
+            )}
+            {error && (
+              <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {error}
+              </p>
+            )}
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setConfirming(null);
+                  setError(null);
+                }}
+                disabled={pending !== null}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={isCancel ? "primary" : "gold"}
+                loading={pending === confirming}
+                disabled={isCancel && cancelReason.trim().length < 3}
+                onClick={() =>
+                  run(
+                    confirming,
+                    isCancel ? { reason: cancelReason.trim() } : undefined
+                  )
+                }
+              >
+                {isCancel ? "Cancel fair" : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sanity-check pieces of info we accept but don't render */}
       <span hidden>{earlybirdDeadline}</span>
